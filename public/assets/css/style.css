@@ -2247,28 +2247,43 @@ button, .primary {
   font-weight: 600;
 }
 
-.word-pdf-render {
-  position: fixed;
-  left: -12000px;
-  top: 0;
-  width: 794px;
-  padding: 48px;
-  background: #ffffff;
-  color: #111111;
-  font-family: Georgia, "Times New Roman", Times, serif;
-  font-size: 12pt;
-  line-height: 1.5;
-  z-index: -1;
-  pointer-events: none;
+.word-pdf-capture {
+  position: fixed !important;
+  left: 0 !important;
+  top: 0 !important;
+  width: 794px !important;
+  padding: 48px !important;
+  margin: 0 !important;
+  background: #ffffff !important;
+  color: #111111 !important;
+  font-family: Georgia, "Times New Roman", Times, serif !important;
+  font-size: 12pt !important;
+  line-height: 1.55 !important;
+  box-sizing: border-box !important;
+  z-index: 2147483646 !important;
+  opacity: 1 !important;
+  pointer-events: none !important;
+  overflow: visible !important;
 }
 
-.word-pdf-render img {
+.word-pdf-capture img {
   max-width: 100%;
   height: auto;
 }
 
-.word-pdf-render p {
+.word-pdf-capture p {
   margin: 0 0 0.7em;
+  color: #111111;
+}
+
+.word-pdf-capture h1,
+.word-pdf-capture h2,
+.word-pdf-capture h3,
+.word-pdf-capture h4,
+.word-pdf-capture li,
+.word-pdf-capture span,
+.word-pdf-capture strong {
+  color: #111111;
 }
 
 .actions-bar {

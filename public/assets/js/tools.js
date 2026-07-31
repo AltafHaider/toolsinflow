@@ -1631,6 +1631,167 @@
       </div>`;
   }
 
+  async function waitForPaint() {
+    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    await new Promise((resolve) => setTimeout(resolve, 80));
+  }
+
+  async function waitForImages(root) {
+    const images = [...root.querySelectorAll("img")];
+    await Promise.all(
+      images.map((img) => {
+        if (img.complete) return Promise.resolve();
+        return new Promise((resolve) => {
+          img.onload = () => resolve();
+          img.onerror = () => resolve();
+        });
+      })
+    );
+  }
+
+  async function buildTextPdfFromWord(arrayBuffer) {
+    if (typeof PDFLib === "undefined") {
+      throw new Error("PDF library missing. Refresh the page and try again.");
+    }
+
+    const raw = await mammoth.extractRawText({ arrayBuffer });
+    const text = String(raw.value || "").replace(/\r\n/g, "\n").trim();
+    if (!text) throw new Error("No readable content was found in this Word file.");
+
+    const { PDFDocument, StandardFonts, rgb } = PDFLib;
+    const doc = await PDFDocument.create();
+    const font = await doc.embedFont(StandardFonts.TimesRoman);
+    const pageWidth = 595.28;
+    const pageHeight = 841.89;
+    const margin = 48;
+    const maxWidth = pageWidth - margin * 2;
+    const fontSize = 11;
+    const lineHeight = 16;
+
+    const paragraphs = text
+      .split(/\n{2,}/)
+      .map((part) => part.replace(/\n/g, " ").replace(/\s+/g, " ").trim())
+      .filter(Boolean);
+
+    let page = doc.addPage([pageWidth, pageHeight]);
+    let y = pageHeight - margin;
+
+    const wrapLine = (line) => {
+      const words = line.split(" ");
+      const lines = [];
+      let current = "";
+      words.forEach((word) => {
+        const next = current ? `${current} ${word}` : word;
+        if (font.widthOfTextAtSize(next, fontSize) <= maxWidth) current = next;
+        else {
+          if (current) lines.push(current);
+          current = word;
+        }
+      });
+      if (current) lines.push(current);
+      return lines.length ? lines : [""];
+    };
+
+    paragraphs.forEach((paragraph) => {
+      wrapLine(paragraph).forEach((line) => {
+        if (y < margin + lineHeight) {
+          page = doc.addPage([pageWidth, pageHeight]);
+          y = pageHeight - margin;
+        }
+        page.drawText(line, {
+          x: margin,
+          y: y - fontSize,
+          size: fontSize,
+          font,
+          color: rgb(0.07, 0.07, 0.07),
+        });
+        y -= lineHeight;
+      });
+      y -= 8;
+    });
+
+    const bytes = await doc.save();
+    return new Blob([bytes], { type: "application/pdf" });
+  }
+
+  function canvasHasInk(canvas) {
+    if (!canvas || !canvas.width || !canvas.height) return false;
+    const ctx = canvas.getContext("2d", { willReadFrequently: true });
+    if (!ctx) return false;
+    const sampleHeight = Math.min(canvas.height, 420);
+    const { data } = ctx.getImageData(0, 0, canvas.width, sampleHeight);
+    let ink = 0;
+    for (let i = 0; i < data.length; i += 32) {
+      const r = data[i];
+      const g = data[i + 1];
+      const b = data[i + 2];
+      const a = data[i + 3];
+      if (a > 10 && (r < 245 || g < 245 || b < 245)) {
+        ink += 1;
+        if (ink > 40) return true;
+      }
+    }
+    return false;
+  }
+
+  async function buildHtmlPdfFromWord(html) {
+    const host = document.createElement("div");
+    host.className = "word-pdf-capture";
+    host.innerHTML = html;
+    document.body.appendChild(host);
+
+    try {
+      await waitForImages(host);
+      await waitForPaint();
+
+      const worker = html2pdf()
+        .set({
+          margin: [10, 10, 10, 10],
+          filename: "document.pdf",
+          image: { type: "jpeg", quality: 0.98 },
+          html2canvas: {
+            scale: 2,
+            useCORS: true,
+            allowTaint: true,
+            backgroundColor: "#ffffff",
+            logging: false,
+            scrollX: 0,
+            scrollY: 0,
+            windowWidth: Math.max(794, host.scrollWidth),
+            windowHeight: Math.max(host.scrollHeight, 1123),
+            onclone(clonedDoc) {
+              const clone = clonedDoc.querySelector(".word-pdf-capture");
+              if (!clone) return;
+              clone.style.setProperty("position", "absolute", "important");
+              clone.style.setProperty("left", "0", "important");
+              clone.style.setProperty("top", "0", "important");
+              clone.style.setProperty("opacity", "1", "important");
+              clone.style.setProperty("background", "#ffffff", "important");
+              clone.style.setProperty("color", "#111111", "important");
+            },
+          },
+          jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
+          pagebreak: { mode: ["css", "legacy"] },
+        })
+        .from(host);
+
+      const canvas = await worker.toCanvas();
+      if (!canvasHasInk(canvas)) {
+        throw new Error("Generated PDF looked empty.");
+      }
+
+      await worker.toPdf();
+      const pdf = await worker.get("pdf");
+      const pdfBlob = pdf.output("blob");
+      if (!pdfBlob || pdfBlob.size < 900) {
+        throw new Error("Generated PDF looked empty.");
+      }
+      return pdfBlob;
+    } finally {
+      host.remove();
+    }
+  }
+
   async function wordToPdf() {
     if (!window.mammoth || typeof window.html2pdf !== "function") {
       throw new Error("Word to PDF libraries are missing. Refresh the page and try again.");
@@ -1655,44 +1816,44 @@
       .slice(0, 3)
       .map((msg) => msg.message);
 
-    const host = document.createElement("div");
-    host.className = "word-pdf-render";
-    host.innerHTML = html;
-    document.body.appendChild(host);
-
-    setStatus("Building PDF preview...");
+    setStatus("Building PDF...");
     const base = CZImage.baseName(file);
-    try {
-      const pdfBlob = await html2pdf()
-        .set({
-          margin: [12, 12, 12, 12],
-          filename: `${base}.pdf`,
-          image: { type: "jpeg", quality: 0.96 },
-          html2canvas: { scale: 2, useCORS: true, logging: false, backgroundColor: "#ffffff" },
-          jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
-          pagebreak: { mode: ["css", "legacy"] },
-        })
-        .from(host)
-        .outputPdf("blob");
+    let pdfBlob;
+    let usedFallback = false;
 
-      queueFile(pdfBlob, `${base}.pdf`, "application/pdf");
-      previewHtml = `<div class="word-pdf-preview">
-          <div class="preview-file-card preview-file-card--pdf">
-            <strong>Word → PDF</strong>
-            <span>${escapeHtml(base)}.pdf</span>
-            <em>Preview the document below, then download</em>
-          </div>
-          <article class="word-pdf-page">${html}</article>
-          ${
-            warnings.length
-              ? `<p class="docx-preview-note">${escapeHtml(
-                  "Some formatting may look slightly different in the PDF."
-                )}</p>`
-              : ""
-          }
-        </div>`;
-    } finally {
-      host.remove();
+    try {
+      pdfBlob = await buildHtmlPdfFromWord(html);
+    } catch (err) {
+      usedFallback = true;
+      setStatus("Retrying with text PDF...");
+      pdfBlob = await buildTextPdfFromWord(arrayBuffer);
     }
+
+    if (!pdfBlob || pdfBlob.size < 200) {
+      throw new Error("Could not create the PDF. Try another .docx file.");
+    }
+
+    queueFile(pdfBlob, `${base}.pdf`, "application/pdf");
+    previewHtml = `<div class="word-pdf-preview">
+        <div class="preview-file-card preview-file-card--pdf">
+          <strong>Word → PDF</strong>
+          <span>${escapeHtml(base)}.pdf</span>
+          <em>${
+            usedFallback
+              ? "Text PDF ready · preview below, then download"
+              : "Preview the document below, then download"
+          }</em>
+        </div>
+        <article class="word-pdf-page">${html}</article>
+        ${
+          warnings.length || usedFallback
+            ? `<p class="docx-preview-note">${escapeHtml(
+                usedFallback
+                  ? "Layout was simplified so the PDF would not be blank. Content is included."
+                  : "Some formatting may look slightly different in the PDF."
+              )}</p>`
+            : ""
+        }
+      </div>`;
   }
 })();

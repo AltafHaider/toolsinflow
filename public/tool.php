@@ -41,6 +41,7 @@ $isPdfUpload = $needsPdfToWord || $needsMergePdf;
   <?php if ($tool && $needsWordToPdf): ?>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.8.0/mammoth.browser.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
   <?php endif; ?>
   <?php if ($tool && $needsPdfForms): ?>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
@@ -131,7 +132,7 @@ $isPdfUpload = $needsPdfToWord || $needsMergePdf;
   <script src="<?= $assetBase ?>/js/study-ppt.js?v=1"></script>
   <?php elseif ($tool): ?>
   <script src="<?= $assetBase ?>/js/image-core.js?v=21"></script>
-  <script src="<?= $assetBase ?>/js/tools.js?v=42"></script>
+  <script src="<?= $assetBase ?>/js/tools.js?v=43"></script>
   <?php endif; ?>
 </body>
 </html>
