@@ -1,0 +1,57 @@
+<?php
+declare(strict_types=1);
+?>
+<main class="container">
+  <div class="study-ppt-shell" id="studyPptShell">
+    <div class="study-ppt-grid">
+      <section class="study-ppt-panel">
+        <label class="study-field">
+          <span>Topic name</span>
+          <input type="text" id="studyTopic" maxlength="120" placeholder="Example: Photosynthesis, World War 2, Fractions" autocomplete="off" />
+        </label>
+
+        <label class="study-field">
+          <span>Or paste your study material</span>
+          <textarea id="studyMaterial" rows="10" placeholder="Paste notes, textbook text, or class material here. We will turn it into simple slides."></textarea>
+        </label>
+
+        <div class="study-options">
+          <label class="study-field study-field--inline">
+            <span>Slide count</span>
+            <select id="studySlideCount">
+              <option value="6">6 slides</option>
+              <option value="8" selected>8 slides</option>
+              <option value="10">10 slides</option>
+              <option value="12">12 slides</option>
+            </select>
+          </label>
+          <label class="study-check">
+            <input type="checkbox" id="studySimpleWords" checked />
+            <span>Use simple, easy words</span>
+          </label>
+        </div>
+
+        <div class="study-templates" id="studyTemplates" aria-label="Presentation templates">
+          <p class="study-templates-label">Choose a design template</p>
+          <div class="study-template-grid" id="studyTemplateGrid"></div>
+        </div>
+
+        <div class="study-actions">
+          <button type="button" class="primary" id="studyGenerateBtn">Create presentation</button>
+          <button type="button" class="ghost" id="studyDownloadBtn" disabled>Download PowerPoint</button>
+        </div>
+        <p class="status" id="studyStatus" role="status">Enter a topic or paste notes, pick a template, then create your PPT.</p>
+      </section>
+
+      <aside class="study-ppt-preview" aria-live="polite">
+        <div class="study-preview-head">
+          <h2>Slide preview</h2>
+          <span id="studyPreviewMeta">No slides yet</span>
+        </div>
+        <div class="study-preview-stage" id="studyPreviewStage">
+          <p class="study-preview-empty">Your slides will appear here before you download.</p>
+        </div>
+      </aside>
+    </div>
+  </div>
+</main>

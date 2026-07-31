@@ -3165,3 +3165,227 @@ html.pdf-plain-cursor textarea {
     font-size: 0.85rem;
   }
 }
+
+/* Study PPT Maker */
+.study-ppt-shell {
+  margin: 0 0 2.5rem;
+}
+
+.study-ppt-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+  gap: 1.1rem;
+  align-items: start;
+}
+
+.study-ppt-panel,
+.study-ppt-preview {
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: var(--surface);
+  padding: 1.15rem;
+}
+
+.study-field {
+  display: grid;
+  gap: 0.4rem;
+  margin-bottom: 0.95rem;
+  font-weight: 700;
+}
+
+.study-field span {
+  font-size: 0.9rem;
+}
+
+.study-field input,
+.study-field textarea,
+.study-field select {
+  font: inherit;
+  font-weight: 500;
+  padding: 0.8rem 0.9rem;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--ink);
+  width: 100%;
+}
+
+.study-field textarea {
+  resize: vertical;
+  min-height: 180px;
+  line-height: 1.5;
+}
+
+.study-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.85rem 1.25rem;
+  align-items: end;
+  margin-bottom: 1rem;
+}
+
+.study-field--inline {
+  margin: 0;
+  min-width: 140px;
+}
+
+.study-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.study-templates-label {
+  margin: 0 0 0.65rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.study-template-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.55rem;
+}
+
+.study-template {
+  display: grid;
+  gap: 0.35rem;
+  justify-items: center;
+  margin: 0;
+  padding: 0.45rem;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.study-template.is-active,
+.study-template:hover {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 18%, transparent);
+}
+
+.study-template-swatch {
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  font-size: 1rem;
+}
+
+.study-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  margin-top: 1.1rem;
+}
+
+.study-ppt-panel .status {
+  margin-top: 0.85rem;
+}
+
+.study-preview-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.85rem;
+}
+
+.study-preview-head h2 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.study-preview-head span {
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.study-preview-stage {
+  display: grid;
+  gap: 0.75rem;
+  max-height: min(72vh, 820px);
+  overflow: auto;
+  padding-right: 0.15rem;
+}
+
+.study-preview-empty {
+  margin: 0;
+  padding: 2rem 1rem;
+  text-align: center;
+  color: var(--muted);
+  border: 1px dashed var(--border);
+  border-radius: 14px;
+}
+
+.study-slide-card {
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+  background: var(--slide-bg);
+}
+
+.study-slide-card header {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.45rem 0.7rem;
+  background: color-mix(in srgb, #000 18%, transparent);
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.study-slide-face {
+  margin: 0.65rem;
+  padding: 0.9rem 1rem;
+  border-radius: 12px;
+  background: var(--slide-card);
+  color: var(--slide-text);
+  min-height: 140px;
+}
+
+.study-slide-face h3 {
+  margin: 0 0 0.55rem;
+  font-size: 1.05rem;
+  letter-spacing: -0.02em;
+}
+
+.study-slide-face p,
+.study-slide-face li {
+  color: var(--slide-muted);
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.study-slide-face ul {
+  margin: 0;
+  padding-left: 1.1rem;
+  display: grid;
+  gap: 0.3rem;
+}
+
+@media (max-width: 960px) {
+  .study-ppt-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .study-template-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 560px) {
+  .study-template-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

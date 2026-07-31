@@ -21,6 +21,7 @@ if ($id === '' || !isset($tools[$id])) {
 $needsPdfLib = $id === 'images-to-pdf';
 $needsPdfToWord = $id === 'pdf-to-word';
 $needsPdfForms = $id === 'pdf-form-creator';
+$needsStudyPpt = $id === 'study-ppt';
 ?>
 <!DOCTYPE html>
 <html lang="en" data-theme="light">
@@ -37,6 +38,9 @@ $needsPdfForms = $id === 'pdf-form-creator';
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
   <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alex+Brush&amp;family=Allura&amp;family=Caveat:wght@500&amp;family=Dancing+Script:wght@600&amp;family=Great+Vibes&amp;family=Homemade+Apple&amp;family=Italianno&amp;family=Marck+Script&amp;family=Pacifico&amp;family=Parisienne&amp;family=Pinyon+Script&amp;family=Sacramento&amp;family=Satisfy&amp;family=Tangerine:wght@700&amp;family=Yellowtail&amp;display=swap" />
+  <?php endif; ?>
+  <?php if ($tool && $needsStudyPpt): ?>
+  <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
   <?php endif; ?>
 </head>
 <body>
@@ -56,6 +60,8 @@ $needsPdfForms = $id === 'pdf-form-creator';
 
     <?php if ($needsPdfForms): ?>
       <?php require dirname(__DIR__) . '/includes/pdf-form-editor-view.php'; ?>
+    <?php elseif ($needsStudyPpt): ?>
+      <?php require dirname(__DIR__) . '/includes/study-ppt-view.php'; ?>
     <?php else: ?>
     <main class="container">
       <div class="workspace" id="workspace" data-tool="<?= cz_h($id) ?>">
@@ -85,6 +91,8 @@ $needsPdfForms = $id === 'pdf-form-creator';
   <script src="<?= $assetBase ?>/js/app.js?v=41"></script>
   <?php if ($tool && $needsPdfForms): ?>
   <script src="<?= $assetBase ?>/js/pdf-form-editor.js?v=13"></script>
+  <?php elseif ($tool && $needsStudyPpt): ?>
+  <script src="<?= $assetBase ?>/js/study-ppt.js?v=1"></script>
   <?php elseif ($tool): ?>
   <script src="<?= $assetBase ?>/js/image-core.js?v=20"></script>
   <script src="<?= $assetBase ?>/js/tools.js?v=39"></script>

@@ -25,6 +25,11 @@ return [
             'desc' => 'Convert a text-based PDF into an editable Word document.',
             'cat'  => 'pdf',
         ],
+        'study-ppt' => [
+            'name' => 'Study PPT Maker',
+            'desc' => 'Enter a topic or paste study notes to create an editable PowerPoint with simple student-friendly slides and 10 design templates.',
+            'cat'  => 'study',
+        ],
         'compress-image' => [
             'name' => 'Compress Image',
             'desc' => 'Reduce image file size with quality control.',
@@ -114,6 +119,7 @@ return [
 
     'categories' => [
         'pdf'      => 'PDF Tools',
+        'study'    => 'Study Tools',
         'optimize' => 'Optimize',
         'convert'  => 'Convert',
         'edit'     => 'Edit',

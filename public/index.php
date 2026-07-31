@@ -9,7 +9,7 @@ foreach ($tools as $id => $tool) {
     $byCat[$tool['cat']][$id] = $tool;
 }
 
-$featured = ['pdf-form-creator', 'pdf-to-word', 'bg-remove', 'blur-faces', 'image-to-svg', 'compress-image'];
+$featured = ['study-ppt', 'pdf-form-creator', 'pdf-to-word', 'bg-remove', 'blur-faces', 'compress-image'];
 ?>
 <!DOCTYPE html>
 <html lang="en" data-theme="light">
@@ -270,11 +270,28 @@ $featured = ['pdf-form-creator', 'pdf-to-word', 'bg-remove', 'blur-faces', 'imag
     <?php
       $imageCats = ['optimize', 'convert', 'edit', 'effects'];
       $pdfCats = ['pdf'];
+      $studyCats = ['study'];
     ?>
 
     <div class="tools-group" id="pdf">
       <h3 class="group-title">PDF tools</h3>
       <?php foreach ($pdfCats as $catId): ?>
+        <?php if (empty($byCat[$catId])) continue; ?>
+        <div class="tools-grid">
+          <?php foreach ($byCat[$catId] as $id => $tool): ?>
+            <a class="tool-card" href="<?= cz_tool_url($id) ?>">
+              <?= cz_tool_icon($id) ?>
+              <strong><?= cz_h($tool['name']) ?></strong>
+              <span><?= cz_h($tool['desc']) ?></span>
+            </a>
+          <?php endforeach; ?>
+        </div>
+      <?php endforeach; ?>
+    </div>
+
+    <div class="tools-group" id="study">
+      <h3 class="group-title">Study tools</h3>
+      <?php foreach ($studyCats as $catId): ?>
         <?php if (empty($byCat[$catId])) continue; ?>
         <div class="tools-grid">
           <?php foreach ($byCat[$catId] as $id => $tool): ?>

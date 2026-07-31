@@ -114,6 +114,7 @@ function cz_tool_icon(string $id): string
         'grayscale-image' => '<circle cx="12" cy="12" r="8"/><path d="M12 4v16a8 8 0 000-16z"/>',
         'blur-faces' => '<circle cx="12" cy="9.5" r="3.2"/><path d="M6 19a6 6 0 0112 0"/><path d="M5 8.5h2.2M16.8 8.5H19M8.2 5.8l1.3 1.3M15.8 5.8l-1.3 1.3"/>',
         'images-to-pdf' => '<path d="M7 3h8l4 4v14H7z"/><path d="M15 3v4h4M9 12h6M9 15h6M9 18h4"/>',
+        'study-ppt' => '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M8 9h8M8 12h6M8 15h4"/><path d="M16 15l2 1.5V13.5z"/>',
     ];
 
     $path = $icons[$id] ?? '<rect x="6" y="6" width="12" height="12" rx="2"/>';
@@ -163,7 +164,7 @@ function cz_render_head(string $title, string $description, string $path = '/', 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Urbanist:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="<?= $assetBase ?>/css/style.css?v=64" />
+  <link rel="stylesheet" href="<?= $assetBase ?>/css/style.css?v=65" />
   <link rel="preconnect" href="https://images.unsplash.com" crossorigin />
   <script type="application/ld+json">
   <?= json_encode([
@@ -223,6 +224,11 @@ function cz_nav_tools_by_group(): array
             'label' => 'PDF tools',
             'href' => cz_url() . '#pdf',
             'cats' => ['pdf'],
+        ],
+        'study' => [
+            'label' => 'Study tools',
+            'href' => cz_url() . '#study',
+            'cats' => ['study'],
         ],
     ];
 
@@ -326,6 +332,7 @@ function cz_render_footer(): void
       <div class="footer-links">
         <a href="<?= cz_url() ?>#image-tools">Image tools</a>
         <a href="<?= cz_url() ?>#pdf">PDF tools</a>
+        <a href="<?= cz_url() ?>#study">Study tools</a>
         <a href="<?= cz_url() ?>#tools">All tools</a>
         <a href="<?= cz_url('about') ?>">About</a>
         <a href="<?= cz_url('contact') ?>">Contact</a>
