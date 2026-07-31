@@ -60,6 +60,7 @@
       "images-to-pdf": "Download PDF",
       "pdf-to-word": "Download Word",
       "word-to-pdf": "Download PDF",
+      "merge-pdf": "Download PDF",
     };
     return map[tool] || "Download file";
   }
@@ -67,6 +68,7 @@
   function isDocExchangeTool() {
     return tool === "pdf-to-word" || tool === "word-to-pdf";
   }
+
 
   function setStatus(msg, type = "") {
     statusEl.textContent = msg || "";
@@ -168,7 +170,7 @@
   }
 
   function acceptAttr() {
-    if (tool === "pdf-to-word") return "application/pdf,.pdf";
+    if (tool === "pdf-to-word" || tool === "merge-pdf") return "application/pdf,.pdf";
     if (tool === "word-to-pdf") {
       return ".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document";
     }
@@ -208,6 +210,8 @@
   dropHint.textContent =
     tool === "pdf-to-word"
       ? "One PDF file. Text remains editable in Word."
+      : tool === "merge-pdf"
+      ? "Two or more PDF files. Order follows the list below."
       : tool === "word-to-pdf"
       ? "One Word .docx file. Preview the PDF before download."
       : tool === "blur-faces"
@@ -249,6 +253,25 @@
     if (!arr.length) return;
     if (tool === "pdf-to-word" && !/\.pdf$/i.test(arr[0].name || "")) {
       setStatus("Please choose a PDF file.", "error");
+      return;
+    }
+    if (tool === "merge-pdf") {
+      const pdfs = arr.filter((file) => /\.pdf$/i.test(file.name || "") || (file.type || "").includes("pdf"));
+      if (!pdfs.length) {
+        setStatus("Please choose PDF files.", "error");
+        return;
+      }
+      files = files.concat(pdfs);
+      cutouts = [];
+      manual = { source: null, mask: null, display: null, painting: false, scale: 1 };
+      clearPreview();
+      renderFiles();
+      setStatus(
+        files.length < 2
+          ? `${files.length} PDF added. Add at least one more to merge.`
+          : `${files.length} PDF(s). Building merge preview...`
+      );
+      if (files.length >= 2) scheduleAutoRun(250);
       return;
     }
     if (tool === "word-to-pdf") {
@@ -303,8 +326,17 @@
         clearPreview();
         renderFiles();
         if (files.length) {
-          setStatus(`${files.length} image(s). Updating preview...`);
-          scheduleAutoRun(200);
+          if (tool === "merge-pdf") {
+            setStatus(
+              files.length < 2
+                ? `${files.length} PDF left. Add at least one more to merge.`
+                : `${files.length} PDF(s). Updating merge preview...`
+            );
+            if (files.length >= 2) scheduleAutoRun(200);
+          } else {
+            setStatus(`${files.length} image(s). Updating preview...`);
+            scheduleAutoRun(200);
+          }
         } else {
           setStatus("");
         }
@@ -575,6 +607,9 @@
           break;
         case "images-to-pdf":
           await imagesToPdf();
+          break;
+        case "merge-pdf":
+          await mergePdfs();
           break;
         case "pdf-to-word":
           await pdfToWord();
@@ -1283,6 +1318,53 @@
         previewHtml = `<div class="preview-svg">${svgstr}</div>`;
       }
     }
+  }
+
+  async function mergePdfs() {
+    if (typeof PDFLib === "undefined") throw new Error("PDF library missing. Refresh the page.");
+    if (files.length < 2) throw new Error("Add at least two PDF files to merge.");
+
+    const { PDFDocument } = PDFLib;
+    const out = await PDFDocument.create();
+    const summary = [];
+
+    for (let index = 0; index < files.length; index += 1) {
+      const file = files[index];
+      setStatus(`Merging PDF ${index + 1} of ${files.length}...`);
+      let src;
+      try {
+        src = await PDFDocument.load(await file.arrayBuffer(), { ignoreEncryption: true });
+      } catch (err) {
+        throw new Error(`Could not read "${file.name}". Try an unlocked PDF.`);
+      }
+      const indices = src.getPageIndices();
+      if (!indices.length) {
+        throw new Error(`"${file.name}" has no pages.`);
+      }
+      const pages = await out.copyPages(src, indices);
+      pages.forEach((page) => out.addPage(page));
+      summary.push({ name: file.name, pages: indices.length });
+    }
+
+    const totalPages = summary.reduce((total, item) => total + item.pages, 0);
+    queueFile(await out.save(), "merged.pdf", "application/pdf");
+    previewHtml = `<div class="word-pdf-preview">
+        <div class="preview-file-card preview-file-card--pdf">
+          <strong>${files.length} PDFs → 1 file</strong>
+          <span>merged.pdf · ${totalPages} page${totalPages === 1 ? "" : "s"}</span>
+          <em>Preview order below, then download</em>
+        </div>
+        <ol class="merge-preview-list">
+          ${summary
+            .map(
+              (item, index) =>
+                `<li><strong>${index + 1}. ${escapeHtml(item.name)}</strong><span>${item.pages} page${
+                  item.pages === 1 ? "" : "s"
+                }</span></li>`
+            )
+            .join("")}
+        </ol>
+      </div>`;
   }
 
   async function imagesToPdf() {

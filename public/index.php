@@ -9,7 +9,7 @@ foreach ($tools as $id => $tool) {
     $byCat[$tool['cat']][$id] = $tool;
 }
 
-$featured = ['study-ppt', 'pdf-form-creator', 'pdf-to-word', 'word-to-pdf', 'bg-remove', 'compress-image'];
+$featured = ['study-ppt', 'pdf-form-creator', 'merge-pdf', 'word-to-pdf', 'bg-remove', 'compress-image'];
 ?>
 <!DOCTYPE html>
 <html lang="en" data-theme="light">
@@ -83,6 +83,7 @@ $featured = ['study-ppt', 'pdf-form-creator', 'pdf-to-word', 'word-to-pdf', 'bg-
                 ['label' => 'Blur faces', 'href' => cz_tool_url('blur-faces')],
                 ['label' => 'PDF Form Creator', 'href' => cz_tool_url('pdf-form-creator')],
                 ['label' => 'PDF to Word', 'href' => cz_tool_url('pdf-to-word')],
+                ['label' => 'Merge PDF', 'href' => cz_tool_url('merge-pdf')],
                 ['label' => 'Word to PDF', 'href' => cz_tool_url('word-to-pdf')],
                 ['label' => 'Compress image', 'href' => cz_tool_url('compress-image')],
                 ['label' => 'Image to SVG', 'href' => cz_tool_url('image-to-svg')],
@@ -243,22 +244,39 @@ $featured = ['study-ppt', 'pdf-form-creator', 'pdf-to-word', 'word-to-pdf', 'bg-
         </ol>
       </div>
       <div class="flow-visual" id="flowVisual" aria-hidden="true">
-        <div class="flow-card flow-card--in" data-tilt>
-          <span class="flow-label">Any file</span>
-          <div class="flow-pic flow-pic--multi"></div>
-          <span class="flow-sub">JPG, PNG, WebP, PDF</span>
-        </div>
-        <div class="flow-arrow">→</div>
-        <div class="flow-card flow-card--process" data-tilt>
-          <span class="flow-pulse"></span>
-          <span class="flow-label">In flow</span>
-          <span class="flow-sub">Compress, Convert, Edit</span>
-        </div>
-        <div class="flow-arrow">→</div>
-        <div class="flow-card flow-card--out" data-tilt>
-          <span class="flow-label">Your result</span>
-          <div class="flow-pic flow-pic--result"></div>
-          <span class="flow-sub">JPG, PNG, WebP, PDF</span>
+        <div class="flow-stage">
+          <div class="flow-frame">
+            <div class="toolkit-chrome">
+              <span></span><span></span><span></span>
+              <em>Live preview</em>
+            </div>
+            <div class="flow-pipeline">
+              <div class="flow-step" data-tilt>
+                <div class="flow-step-media flow-step-media--files">
+                  <i></i><i></i><i></i>
+                </div>
+                <strong>Drop files</strong>
+                <span>JPG, PNG, WebP, PDF</span>
+              </div>
+              <div class="flow-connector" aria-hidden="true"><span></span></div>
+              <div class="flow-step flow-step--active" data-tilt>
+                <div class="flow-step-media flow-step-media--flow">
+                  <span class="flow-pulse"></span>
+                </div>
+                <strong>In flow</strong>
+                <span>Compress, convert, edit</span>
+              </div>
+              <div class="flow-connector" aria-hidden="true"><span></span></div>
+              <div class="flow-step" data-tilt>
+                <div class="flow-step-media flow-step-media--done">
+                  <em>✓</em>
+                </div>
+                <strong>Preview</strong>
+                <span>Then download</span>
+              </div>
+            </div>
+            <div class="flow-badge">Private · in your browser</div>
+          </div>
         </div>
       </div>
     </div>
@@ -390,6 +408,6 @@ $featured = ['study-ppt', 'pdf-form-creator', 'pdf-to-word', 'word-to-pdf', 'bg-
   </section>
 
   <?php cz_render_footer(); ?>
-  <script src="<?= $assetBase ?>/js/app.js?v=41"></script>
+  <script src="<?= $assetBase ?>/js/app.js?v=42"></script>
 </body>
 </html>

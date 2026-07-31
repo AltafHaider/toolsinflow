@@ -147,6 +147,10 @@ a { color: inherit; text-decoration: none; }
   box-shadow: 0 18px 40px color-mix(in srgb, var(--ink) 14%, transparent);
 }
 
+.header-search-results[hidden] {
+  display: none !important;
+}
+
 .header-search-item {
   display: grid;
   gap: 0.12rem;
@@ -1249,110 +1253,188 @@ a { color: inherit; text-decoration: none; }
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 0.55rem;
-  flex-wrap: wrap;
-  min-height: 180px;
+  min-height: 280px;
   position: relative;
   z-index: 1;
 }
 
-.flow-card {
-  width: 118px;
-  min-height: 136px;
-  border-radius: 16px;
+.flow-stage {
+  width: min(100%, 420px);
+  aspect-ratio: 4 / 3.15;
+  position: relative;
+}
+
+.flow-frame {
+  position: absolute;
+  inset: 4% 3% 6% 3%;
+  border-radius: 22px;
   border: 1px solid var(--border);
   background: var(--surface);
-  display: grid;
-  place-items: center;
-  gap: 0.3rem;
-  padding: 0.7rem 0.55rem;
-  position: relative;
+  box-shadow:
+    0 28px 60px color-mix(in srgb, var(--ink) 14%, transparent),
+    0 0 0 1px color-mix(in srgb, var(--accent) 8%, transparent);
   overflow: hidden;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+}
+
+.flow-pipeline {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr auto 1fr;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 1.1rem 0.85rem 0.85rem;
+  background:
+    radial-gradient(circle at 20% 20%, color-mix(in srgb, var(--accent) 10%, transparent), transparent 45%),
+    linear-gradient(180deg, #e8f0eb 0%, color-mix(in srgb, var(--surface-2) 70%, #fff) 100%);
+}
+
+.flow-step {
+  min-width: 0;
+  display: grid;
+  justify-items: center;
+  gap: 0.4rem;
+  padding: 0.75rem 0.45rem;
+  border-radius: 16px;
+  border: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
+  background: color-mix(in srgb, var(--surface) 92%, #fff);
+  box-shadow: 0 10px 22px color-mix(in srgb, var(--ink) 8%, transparent);
   --ox: 0px;
   --oy: 0px;
   transform: translate(var(--ox), var(--oy));
   transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
-.flow-card.is-near {
-  border-color: var(--accent);
-  box-shadow: 0 12px 26px color-mix(in srgb, var(--accent) 18%, transparent);
-  transform: translate(var(--ox), var(--oy)) scale(1.05);
+.flow-step.is-near,
+.flow-step--active {
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+  box-shadow: 0 14px 28px color-mix(in srgb, var(--accent) 16%, transparent);
 }
 
-.flow-label {
-  font-size: 0.68rem;
-  font-weight: 800;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--ink);
+.flow-step.is-near {
+  transform: translate(var(--ox), var(--oy)) scale(1.03);
+}
+
+.flow-step strong {
+  font-size: 0.78rem;
+  letter-spacing: -0.02em;
   text-align: center;
 }
 
-.flow-sub {
-  font-size: 0.62rem;
+.flow-step > span {
+  font-size: 0.66rem;
   font-weight: 600;
   color: var(--muted);
   text-align: center;
   line-height: 1.25;
 }
 
-.flow-pic {
+.flow-step-media {
   width: 52px;
   height: 52px;
-  border-radius: 12px;
-}
-
-.flow-pic--multi {
-  background:
-    linear-gradient(145deg, #7ec8ff, #8fd4a8 55%, #f0d48a),
-    linear-gradient(145deg, #c9b6ff, #8fd4a8);
-  box-shadow:
-    6px 6px 0 color-mix(in srgb, var(--accent) 25%, var(--surface-2)),
-    12px 12px 0 color-mix(in srgb, var(--border) 80%, transparent);
-  animation: softPulse 2.8s ease-in-out infinite;
-}
-
-.flow-pic--result {
-  background:
-    conic-gradient(from 210deg, #7ec8ff, #8fd4a8, #f0d48a, #7ec8ff);
+  border-radius: 14px;
   display: grid;
   place-items: center;
-  animation: softPulse 2.8s ease-in-out infinite 0.4s;
+  position: relative;
+  background: #e8f0eb;
 }
 
-.flow-pic--result::after {
-  content: "✓";
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  background: var(--surface);
-  color: var(--accent);
-  display: grid;
-  place-items: center;
-  font-weight: 800;
-  font-size: 0.75rem;
+.flow-step-media--files {
+  background: linear-gradient(160deg, #dceee5, #eef5f0);
 }
 
-.flow-card--process {
-  background: color-mix(in srgb, var(--accent) 12%, var(--surface));
-  border-color: color-mix(in srgb, var(--accent) 35%, var(--border));
+.flow-step-media--files i {
+  position: absolute;
+  width: 28px;
+  height: 34px;
+  border-radius: 7px;
+  border: 1px solid color-mix(in srgb, var(--accent) 25%, var(--border));
+  background: #fff;
+  box-shadow: 0 8px 16px rgba(20, 40, 32, 0.1);
+}
+
+.flow-step-media--files i:nth-child(1) {
+  transform: translate(-8px, 4px) rotate(-8deg);
+}
+
+.flow-step-media--files i:nth-child(2) {
+  transform: translate(0, 0) rotate(2deg);
+  z-index: 1;
+}
+
+.flow-step-media--files i:nth-child(3) {
+  transform: translate(8px, -3px) rotate(10deg);
+  background: linear-gradient(160deg, #f7fbf8, #e7f3ec);
+}
+
+.flow-step-media--flow {
+  background: color-mix(in srgb, var(--accent) 14%, #e8f0eb);
 }
 
 .flow-pulse {
-  width: 34px;
-  height: 34px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
-  border: 3px solid color-mix(in srgb, var(--accent) 35%, transparent);
+  border: 3px solid color-mix(in srgb, var(--accent) 28%, transparent);
   border-top-color: var(--accent);
   animation: spin 1.1s linear infinite;
 }
 
-.flow-arrow {
-  color: var(--accent);
+.flow-step-media--done {
+  background: linear-gradient(160deg, #dff3ea, #eef7f2);
+}
+
+.flow-step-media--done em {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--accent);
+  color: #fff;
+  font-style: normal;
   font-weight: 800;
-  font-size: 1.2rem;
+  font-size: 0.85rem;
+  box-shadow: 0 8px 16px color-mix(in srgb, var(--accent) 35%, transparent);
+  animation: softPulse 2.8s ease-in-out infinite;
+}
+
+.flow-connector {
+  width: 18px;
+  display: grid;
+  place-items: center;
+}
+
+.flow-connector span {
+  width: 100%;
+  height: 2px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, transparent, var(--accent), transparent);
+  position: relative;
   animation: nudge 1.6s ease-in-out infinite;
+}
+
+.flow-connector span::after {
+  content: "";
+  position: absolute;
+  right: -1px;
+  top: 50%;
+  width: 6px;
+  height: 6px;
+  border-right: 2px solid var(--accent);
+  border-top: 2px solid var(--accent);
+  transform: translateY(-50%) rotate(45deg);
+}
+
+.flow-badge {
+  margin: 0.55rem 0.85rem 0.85rem;
+  justify-self: start;
+  padding: 0.3rem 0.7rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 12%, var(--surface-2));
+  color: var(--accent);
+  font-size: 0.72rem;
+  font-weight: 700;
 }
 
 @keyframes softPulse {
@@ -1366,7 +1448,7 @@ a { color: inherit; text-decoration: none; }
 
 @keyframes nudge {
   0%, 100% { transform: translateX(0); opacity: 0.7; }
-  50% { transform: translateX(4px); opacity: 1; }
+  50% { transform: translateX(3px); opacity: 1; }
 }
 
 @media (max-width: 900px) {
@@ -1392,13 +1474,38 @@ a { color: inherit; text-decoration: none; }
 @media (prefers-reduced-motion: reduce) {
   .hero-stage,
   .orbit-chip,
-  .flow-card,
+  .flow-step,
   .mode,
   .flow-pulse,
-  .flow-arrow,
-  .flow-pic {
+  .flow-connector span,
+  .flow-step-media--done em {
     animation: none !important;
     transition: none !important;
+  }
+}
+
+@media (max-width: 560px) {
+  .flow-pipeline {
+    grid-template-columns: 1fr;
+    gap: 0.55rem;
+  }
+
+  .flow-connector {
+    width: auto;
+    height: 16px;
+  }
+
+  .flow-connector span {
+    width: 2px;
+    height: 100%;
+    background: linear-gradient(180deg, transparent, var(--accent), transparent);
+  }
+
+  .flow-connector span::after {
+    right: 50%;
+    top: auto;
+    bottom: -1px;
+    transform: translateX(50%) rotate(135deg);
   }
 }
 
@@ -2106,6 +2213,38 @@ button, .primary {
   margin: 0 0 0.65rem;
   line-height: 1.25;
   color: #111827;
+}
+
+.merge-preview-list {
+  width: min(520px, 100%);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 0.45rem;
+}
+
+.merge-preview-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.7rem 0.85rem;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+}
+
+.merge-preview-list strong {
+  font-size: 0.9rem;
+  word-break: break-word;
+}
+
+.merge-preview-list span {
+  flex-shrink: 0;
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 600;
 }
 
 .word-pdf-render {

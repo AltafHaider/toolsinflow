@@ -30,6 +30,11 @@ return [
             'desc' => 'Convert a Word (.docx) document into a PDF. Preview first, then download.',
             'cat'  => 'pdf',
         ],
+        'merge-pdf' => [
+            'name' => 'Merge PDF',
+            'desc' => 'Combine multiple PDF files into one PDF. Preview the order, then download.',
+            'cat'  => 'pdf',
+        ],
         'study-ppt' => [
             'name' => 'Study PPT Maker',
             'desc' => 'Enter a topic or paste study notes to create an editable PowerPoint with simple student-friendly slides and 10 design templates.',

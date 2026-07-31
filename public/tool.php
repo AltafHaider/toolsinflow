@@ -18,12 +18,14 @@ if ($id === '' || !isset($tools[$id])) {
     $desc = $tool['desc'] . ' Free private browser tool at toolsinflow.com. No signup required.';
 }
 
-$needsPdfLib = $id === 'images-to-pdf';
+$needsPdfLib = $id === 'images-to-pdf' || $id === 'merge-pdf';
 $needsPdfToWord = $id === 'pdf-to-word';
 $needsWordToPdf = $id === 'word-to-pdf';
+$needsMergePdf = $id === 'merge-pdf';
 $needsPdfForms = $id === 'pdf-form-creator';
 $needsStudyPpt = $id === 'study-ppt';
 $isDocExchange = $needsPdfToWord || $needsWordToPdf;
+$isPdfUpload = $needsPdfToWord || $needsMergePdf;
 ?>
 <!DOCTYPE html>
 <html lang="en" data-theme="light">
@@ -73,7 +75,9 @@ $isDocExchange = $needsPdfToWord || $needsWordToPdf;
       <div class="workspace" id="workspace" data-tool="<?= cz_h($id) ?>">
         <div class="dropzone" id="dropzone" tabindex="0">
           <strong><?php
-            if ($needsPdfToWord) {
+            if ($needsMergePdf) {
+                echo 'Drop PDF files here or click to choose';
+            } elseif ($needsPdfToWord) {
                 echo 'Drop a PDF here or click to choose';
             } elseif ($needsWordToPdf) {
                 echo 'Drop a Word file here or click to choose';
@@ -82,7 +86,9 @@ $isDocExchange = $needsPdfToWord || $needsWordToPdf;
             }
           ?></strong>
           <span id="dropHint"><?php
-            if ($needsPdfToWord) {
+            if ($needsMergePdf) {
+                echo 'Select two or more PDF files';
+            } elseif ($needsPdfToWord) {
                 echo 'Normal or scanned PDF files';
             } elseif ($needsWordToPdf) {
                 echo 'Word .docx files';
@@ -91,7 +97,7 @@ $isDocExchange = $needsPdfToWord || $needsWordToPdf;
             }
           ?></span>
           <input type="file" id="fileInput" hidden accept="<?php
-            if ($needsPdfToWord) {
+            if ($isPdfUpload) {
                 echo 'application/pdf,.pdf';
             } elseif ($needsWordToPdf) {
                 echo '.docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document';
@@ -118,14 +124,14 @@ $isDocExchange = $needsPdfToWord || $needsWordToPdf;
   <?php endif; ?>
 
   <?php cz_render_footer(); ?>
-  <script src="<?= $assetBase ?>/js/app.js?v=41"></script>
+  <script src="<?= $assetBase ?>/js/app.js?v=42"></script>
   <?php if ($tool && $needsPdfForms): ?>
   <script src="<?= $assetBase ?>/js/pdf-form-editor.js?v=13"></script>
   <?php elseif ($tool && $needsStudyPpt): ?>
   <script src="<?= $assetBase ?>/js/study-ppt.js?v=1"></script>
   <?php elseif ($tool): ?>
   <script src="<?= $assetBase ?>/js/image-core.js?v=21"></script>
-  <script src="<?= $assetBase ?>/js/tools.js?v=41"></script>
+  <script src="<?= $assetBase ?>/js/tools.js?v=42"></script>
   <?php endif; ?>
 </body>
 </html>
