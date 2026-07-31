@@ -3717,7 +3717,7 @@ html.pdf-plain-cursor textarea {
 
 .study-template-grid {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
   gap: 0.55rem;
 }
 
@@ -3744,12 +3744,132 @@ html.pdf-plain-cursor textarea {
 }
 
 .study-template-swatch {
+  position: relative;
   width: 100%;
   aspect-ratio: 16 / 10;
   border-radius: 8px;
   display: grid;
   place-items: center;
   font-size: 1rem;
+  overflow: hidden;
+}
+
+/* Swatch layout mini-hints */
+.study-swatch--leftbar::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 18%;
+  background: color-mix(in srgb, var(--slide-accent, #fff) 85%, transparent);
+  border-radius: 8px 0 0 8px;
+}
+
+.study-swatch--topbar::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 28%;
+  background: color-mix(in srgb, var(--slide-accent, #fff) 85%, transparent);
+  border-radius: 8px 8px 0 0;
+}
+
+.study-swatch--rightbar::before {
+  content: "";
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 18%;
+  background: color-mix(in srgb, var(--slide-accent, #fff) 85%, transparent);
+  border-radius: 0 8px 8px 0;
+}
+
+.study-swatch--frame::before {
+  content: "";
+  position: absolute;
+  inset: 4px;
+  border: 2px solid color-mix(in srgb, var(--slide-accent, #fff) 70%, transparent);
+  border-radius: 5px;
+  pointer-events: none;
+}
+
+.study-swatch--banner::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 38%;
+  background: color-mix(in srgb, var(--slide-accent, #fff) 85%, transparent);
+  border-radius: 8px 8px 0 0;
+}
+
+.study-swatch--split::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 35%;
+  background: color-mix(in srgb, var(--slide-accent, #fff) 85%, transparent);
+  border-radius: 8px 0 0 8px;
+}
+
+.study-swatch--corner::after {
+  content: "";
+  position: absolute;
+  right: -8px;
+  top: -8px;
+  width: 42%;
+  height: 42%;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--slide-accent, #fff) 55%, transparent);
+}
+
+.study-swatch--ribbon::before {
+  content: "";
+  position: absolute;
+  left: -12%;
+  top: 28%;
+  width: 55%;
+  height: 14%;
+  background: color-mix(in srgb, var(--slide-accent, #fff) 80%, transparent);
+  transform: rotate(-24deg);
+  border-radius: 2px;
+}
+
+.study-swatch--cards::before,
+.study-swatch--cards::after {
+  content: "";
+  position: absolute;
+  left: 10%;
+  right: 10%;
+  border-radius: 4px;
+}
+
+.study-swatch--cards::before {
+  top: 12%;
+  height: 28%;
+  background: color-mix(in srgb, var(--slide-accent, #fff) 80%, transparent);
+}
+
+.study-swatch--cards::after {
+  top: 46%;
+  bottom: 12%;
+  background: color-mix(in srgb, #fff 25%, transparent);
+}
+
+.study-swatch--spotlight::before {
+  content: "";
+  position: absolute;
+  inset: 14%;
+  border-radius: 8px;
+  background: color-mix(in srgb, #fff 22%, transparent);
+  box-shadow: 0 2px 8px color-mix(in srgb, #000 18%, transparent);
 }
 
 .study-actions {
@@ -3818,12 +3938,207 @@ html.pdf-plain-cursor textarea {
 }
 
 .study-slide-face {
+  position: relative;
   margin: 0.65rem;
   padding: 0.9rem 1rem;
   border-radius: 12px;
   background: var(--slide-card);
   color: var(--slide-text);
   min-height: 140px;
+  overflow: hidden;
+}
+
+.study-face-content {
+  position: relative;
+  z-index: 1;
+}
+
+.study-face-deco {
+  position: absolute;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Preview layout variants */
+.study-face--leftbar {
+  margin-left: 1.35rem;
+  border-left: 4px solid var(--slide-accent);
+}
+
+.study-face--leftbar .study-face-deco--bar-left {
+  left: -1.35rem;
+  top: 0;
+  bottom: 0;
+  width: 0.7rem;
+  background: var(--slide-accent);
+  border-radius: 12px 0 0 12px;
+}
+
+.study-face--topbar {
+  margin-top: 2.1rem;
+  padding-top: 0.65rem;
+}
+
+.study-face--topbar .study-face-deco--bar-top {
+  left: -1rem;
+  right: -1rem;
+  top: -2.1rem;
+  height: 1.75rem;
+  background: var(--slide-accent);
+}
+
+.study-face--rightbar {
+  margin-right: 1.35rem;
+  border-right: 4px solid var(--slide-accent);
+}
+
+.study-face--rightbar .study-face-deco--bar-right {
+  right: -1.35rem;
+  top: 0;
+  bottom: 0;
+  width: 0.7rem;
+  background: var(--slide-accent);
+  border-radius: 0 12px 12px 0;
+}
+
+.study-face--frame {
+  background: transparent;
+  border: 2px solid var(--slide-accent);
+  box-shadow: inset 0 0 0 3px color-mix(in srgb, var(--slide-card) 90%, transparent);
+}
+
+.study-face--frame .study-face-deco--frame {
+  inset: 6px;
+  border: 1px solid color-mix(in srgb, var(--slide-accent) 40%, transparent);
+  border-radius: 8px;
+}
+
+.study-face--banner {
+  margin-top: 2.4rem;
+  background: var(--slide-bg);
+  color: var(--slide-text);
+}
+
+.study-face--banner .study-face-deco--banner {
+  left: -1rem;
+  right: -1rem;
+  top: -2.4rem;
+  height: 2rem;
+  background: var(--slide-accent);
+}
+
+.study-face--banner h3,
+.study-face--banner .study-face-content h3 {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: -2.05rem;
+  margin: 0;
+  padding: 0 0.2rem;
+  color: var(--slide-on-accent, var(--slide-bg));
+  font-size: 0.95rem;
+  z-index: 2;
+}
+
+.study-face--split {
+  display: grid;
+  grid-template-columns: 35% 1fr;
+  gap: 0.65rem;
+  padding: 0;
+  background: transparent;
+}
+
+.study-face--split .study-face-deco--split {
+  position: static;
+  grid-row: 1 / -1;
+  background: var(--slide-accent);
+  border-radius: 12px 0 0 12px;
+  min-height: 140px;
+}
+
+.study-face--split .study-face-content {
+  padding: 0.9rem 0.85rem 0.9rem 0;
+}
+
+.study-face--corner .study-face-deco--corner {
+  right: -1.5rem;
+  top: -1.5rem;
+  width: 4.5rem;
+  height: 4.5rem;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--slide-accent) 45%, transparent);
+}
+
+.study-face--ribbon .study-face-deco--ribbon {
+  left: -1.2rem;
+  top: 0.6rem;
+  width: 55%;
+  height: 0.45rem;
+  background: var(--slide-accent);
+  transform: rotate(-22deg);
+  border-radius: 2px;
+  box-shadow: 0 0.35rem 0 color-mix(in srgb, var(--slide-muted) 70%, transparent);
+}
+
+.study-face--cards {
+  display: grid;
+  gap: 0.55rem;
+  padding: 0;
+  background: transparent;
+}
+
+.study-face--cards .study-face-deco--cards {
+  display: none;
+}
+
+.study-face--cards .study-face-content {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.study-face--cards h3 {
+  margin: 0;
+  padding: 0.65rem 0.85rem;
+  border-radius: 10px;
+  background: var(--slide-accent);
+  color: var(--slide-on-accent, var(--slide-text));
+  font-size: 0.95rem;
+}
+
+.study-face--cards .study-face-content > p,
+.study-face--cards .study-face-content > ul {
+  margin: 0;
+  padding: 0.75rem 0.85rem;
+  border-radius: 10px;
+  background: var(--slide-card);
+}
+
+.study-face--spotlight {
+  margin: 1rem 1.4rem;
+  background: var(--slide-card);
+  box-shadow: 0 6px 20px color-mix(in srgb, #000 22%, transparent);
+}
+
+.study-face--spotlight h3 {
+  position: relative;
+  padding-bottom: 0.45rem;
+}
+
+.study-face--spotlight h3::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 2.5rem;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--slide-accent);
+}
+
+.study-face--spotlight .study-face-deco--spotlight {
+  inset: -0.35rem;
+  border-radius: 14px;
+  border: 1px solid color-mix(in srgb, var(--slide-accent) 25%, transparent);
 }
 
 .study-slide-face h3 {

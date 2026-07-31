@@ -32,7 +32,7 @@ declare(strict_types=1);
         </div>
 
         <div class="study-templates" id="studyTemplates" aria-label="Presentation templates">
-          <p class="study-templates-label">Choose a design template</p>
+          <p class="study-templates-label">Choose from 30 professional designs</p>
           <div class="study-template-grid" id="studyTemplateGrid"></div>
         </div>
 

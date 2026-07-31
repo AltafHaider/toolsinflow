@@ -18,24 +18,29 @@ if ($id === '' || !isset($tools[$id])) {
     $desc = $tool['desc'] . ' Free private browser tool at toolsinflow.com. No signup required.';
 }
 
-$needsPdfLib = $id === 'images-to-pdf' || $id === 'merge-pdf';
+$needsPdfLib = in_array($id, ['images-to-pdf', 'merge-pdf', 'split-pdf'], true);
+$needsPdfJs = in_array($id, ['pdf-to-word', 'merge-pdf', 'split-pdf', 'pdf-form-creator'], true);
 $needsPdfToWord = $id === 'pdf-to-word';
 $needsWordToPdf = $id === 'word-to-pdf';
 $needsMergePdf = $id === 'merge-pdf';
+$needsSplitPdf = $id === 'split-pdf';
 $needsPdfForms = $id === 'pdf-form-creator';
 $needsStudyPpt = $id === 'study-ppt';
 $isDocExchange = $needsPdfToWord || $needsWordToPdf;
-$isPdfUpload = $needsPdfToWord || $needsMergePdf;
+$isSinglePdf = $needsPdfToWord || $needsSplitPdf;
+$isPdfUpload = $needsPdfToWord || $needsMergePdf || $needsSplitPdf;
 ?>
 <!DOCTYPE html>
 <html lang="en" data-theme="light">
 <head>
   <?php cz_render_head($title, $desc, $tool ? '/' . rawurlencode($id) : '/'); ?>
-  <?php if ($tool && $needsPdfLib): ?>
+  <?php if ($tool && $needsPdfLib && !$needsPdfForms): ?>
   <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
   <?php endif; ?>
-  <?php if ($tool && $needsPdfToWord): ?>
+  <?php if ($tool && $needsPdfJs && !$needsPdfForms): ?>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <?php endif; ?>
+  <?php if ($tool && $needsPdfToWord): ?>
   <script src="https://unpkg.com/docx@8.5.0/build/index.umd.js"></script>
   <?php endif; ?>
   <?php if ($tool && $needsWordToPdf): ?>
@@ -78,6 +83,8 @@ $isPdfUpload = $needsPdfToWord || $needsMergePdf;
           <strong><?php
             if ($needsMergePdf) {
                 echo 'Drop PDF files here or click to choose';
+            } elseif ($needsSplitPdf) {
+                echo 'Drop a PDF here or click to choose';
             } elseif ($needsPdfToWord) {
                 echo 'Drop a PDF here or click to choose';
             } elseif ($needsWordToPdf) {
@@ -89,6 +96,8 @@ $isPdfUpload = $needsPdfToWord || $needsMergePdf;
           <span id="dropHint"><?php
             if ($needsMergePdf) {
                 echo 'Select two or more PDF files';
+            } elseif ($needsSplitPdf) {
+                echo 'One PDF file to split or extract pages';
             } elseif ($needsPdfToWord) {
                 echo 'Normal or scanned PDF files';
             } elseif ($needsWordToPdf) {
@@ -105,7 +114,7 @@ $isPdfUpload = $needsPdfToWord || $needsMergePdf;
             } else {
                 echo 'image/*';
             }
-          ?>"<?= $isDocExchange ? '' : ' multiple' ?> />
+          ?>"<?= ($isDocExchange || $isSinglePdf) ? '' : ' multiple' ?> />
         </div>
         <ul class="file-list" id="fileList"></ul>
         <div class="controls" id="controls"></div>
@@ -129,10 +138,10 @@ $isPdfUpload = $needsPdfToWord || $needsMergePdf;
   <?php if ($tool && $needsPdfForms): ?>
   <script src="<?= $assetBase ?>/js/pdf-form-editor.js?v=13"></script>
   <?php elseif ($tool && $needsStudyPpt): ?>
-  <script src="<?= $assetBase ?>/js/study-ppt.js?v=1"></script>
+  <script src="<?= $assetBase ?>/js/study-ppt.js?v=2"></script>
   <?php elseif ($tool): ?>
   <script src="<?= $assetBase ?>/js/image-core.js?v=21"></script>
-  <script src="<?= $assetBase ?>/js/tools.js?v=43"></script>
+  <script src="<?= $assetBase ?>/js/tools.js?v=44"></script>
   <?php endif; ?>
 </body>
 </html>

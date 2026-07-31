@@ -32,12 +32,17 @@ return [
         ],
         'merge-pdf' => [
             'name' => 'Merge PDF',
-            'desc' => 'Combine multiple PDF files into one PDF. Preview the order, then download.',
+            'desc' => 'Combine multiple PDF files into one PDF. Preview pages, then download.',
+            'cat'  => 'pdf',
+        ],
+        'split-pdf' => [
+            'name' => 'Split PDF',
+            'desc' => 'Split a PDF into separate pages or extract a page range. Preview pages first.',
             'cat'  => 'pdf',
         ],
         'study-ppt' => [
             'name' => 'Study PPT Maker',
-            'desc' => 'Enter a topic or paste study notes to create an editable PowerPoint with simple student-friendly slides and 10 design templates.',
+            'desc' => 'Enter a topic or paste study notes to create an editable PowerPoint with simple student-friendly slides and 30 unique professional designs.',
             'cat'  => 'study',
         ],
         'compress-image' => [

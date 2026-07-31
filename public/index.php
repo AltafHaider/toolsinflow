@@ -9,7 +9,7 @@ foreach ($tools as $id => $tool) {
     $byCat[$tool['cat']][$id] = $tool;
 }
 
-$featured = ['study-ppt', 'pdf-form-creator', 'merge-pdf', 'word-to-pdf', 'bg-remove', 'compress-image'];
+$featured = ['study-ppt', 'pdf-form-creator', 'merge-pdf', 'split-pdf', 'bg-remove', 'compress-image'];
 ?>
 <!DOCTYPE html>
 <html lang="en" data-theme="light">
@@ -84,6 +84,7 @@ $featured = ['study-ppt', 'pdf-form-creator', 'merge-pdf', 'word-to-pdf', 'bg-re
                 ['label' => 'PDF Form Creator', 'href' => cz_tool_url('pdf-form-creator')],
                 ['label' => 'PDF to Word', 'href' => cz_tool_url('pdf-to-word')],
                 ['label' => 'Merge PDF', 'href' => cz_tool_url('merge-pdf')],
+                ['label' => 'Split PDF', 'href' => cz_tool_url('split-pdf')],
                 ['label' => 'Word to PDF', 'href' => cz_tool_url('word-to-pdf')],
                 ['label' => 'Compress image', 'href' => cz_tool_url('compress-image')],
                 ['label' => 'Image to SVG', 'href' => cz_tool_url('image-to-svg')],

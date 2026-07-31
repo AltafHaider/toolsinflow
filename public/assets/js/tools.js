@@ -61,12 +61,65 @@
       "pdf-to-word": "Download Word",
       "word-to-pdf": "Download PDF",
       "merge-pdf": "Download PDF",
+      "split-pdf": "Download PDFs",
     };
+    if (tool === "split-pdf") {
+      const mode = document.getElementById("splitMode")?.value || "each";
+      return mode === "range" ? "Download PDF" : "Download PDFs";
+    }
     return map[tool] || "Download file";
   }
 
   function isDocExchangeTool() {
     return tool === "pdf-to-word" || tool === "word-to-pdf";
+  }
+
+  function isSinglePdfTool() {
+    return tool === "pdf-to-word" || tool === "split-pdf";
+  }
+
+  function ensurePdfJs() {
+    if (!window.pdfjsLib) {
+      throw new Error("PDF preview library missing. Refresh the page and try again.");
+    }
+    pdfjsLib.GlobalWorkerOptions.workerSrc =
+      "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+  }
+
+  async function renderPdfThumbnails(bytes, limit = 12, scale = 0.85) {
+    ensurePdfJs();
+    const pdf = await pdfjsLib.getDocument({ data: bytes }).promise;
+    const max = Math.min(pdf.numPages, limit);
+    const thumbs = [];
+    for (let pageNumber = 1; pageNumber <= max; pageNumber += 1) {
+      const page = await pdf.getPage(pageNumber);
+      const viewport = page.getViewport({ scale });
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.max(1, Math.round(viewport.width));
+      canvas.height = Math.max(1, Math.round(viewport.height));
+      await page.render({ canvasContext: canvas.getContext("2d"), viewport }).promise;
+      thumbs.push({
+        number: pageNumber,
+        url: canvas.toDataURL("image/jpeg", 0.84),
+      });
+    }
+    return { total: pdf.numPages, thumbs };
+  }
+
+  function buildThumbGalleryHtml(thumbs, total, captionPrefix = "Page") {
+    const note =
+      total > thumbs.length
+        ? `<p class="docx-preview-note">Showing the first ${thumbs.length} of ${total} pages. All pages are in the download.</p>`
+        : "";
+    return `<div class="preview-gallery">${thumbs
+      .map(
+        (item) => `
+        <figure class="preview-gallery-item">
+          <img class="preview-image" src="${item.url}" alt="${captionPrefix} ${item.number}" />
+          <figcaption>${captionPrefix} ${item.number}</figcaption>
+        </figure>`
+      )
+      .join("")}</div>${note}`;
   }
 
 
@@ -170,7 +223,9 @@
   }
 
   function acceptAttr() {
-    if (tool === "pdf-to-word" || tool === "merge-pdf") return "application/pdf,.pdf";
+    if (tool === "pdf-to-word" || tool === "merge-pdf" || tool === "split-pdf") {
+      return "application/pdf,.pdf";
+    }
     if (tool === "word-to-pdf") {
       return ".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document";
     }
@@ -206,12 +261,14 @@
   }
 
   fileInput.accept = acceptAttr();
-  fileInput.multiple = !isDocExchangeTool();
+  fileInput.multiple = !isDocExchangeTool() && !isSinglePdfTool();
   dropHint.textContent =
     tool === "pdf-to-word"
       ? "One PDF file. Text remains editable in Word."
       : tool === "merge-pdf"
       ? "Two or more PDF files. Order follows the list below."
+      : tool === "split-pdf"
+      ? "One PDF file. Preview pages, then download the split files."
       : tool === "word-to-pdf"
       ? "One Word .docx file. Preview the PDF before download."
       : tool === "blur-faces"
@@ -274,6 +331,20 @@
       if (files.length >= 2) scheduleAutoRun(250);
       return;
     }
+    if (tool === "split-pdf") {
+      if (!/\.pdf$/i.test(arr[0].name || "") && !(arr[0].type || "").includes("pdf")) {
+        setStatus("Please choose a PDF file.", "error");
+        return;
+      }
+      files = [arr[0]];
+      cutouts = [];
+      manual = { source: null, mask: null, display: null, painting: false, scale: 1 };
+      clearPreview();
+      renderFiles();
+      setStatus("Reading PDF pages...");
+      scheduleAutoRun(200);
+      return;
+    }
     if (tool === "word-to-pdf") {
       const name = arr[0].name || "";
       if (/\.doc$/i.test(name) && !/\.docx$/i.test(name)) {
@@ -286,7 +357,9 @@
       }
     }
     files =
-      isDocExchangeTool() || (tool === "blur-faces" && privacyMode() === "manual")
+      isDocExchangeTool() ||
+      isSinglePdfTool() ||
+      (tool === "blur-faces" && privacyMode() === "manual")
         ? [arr[0]]
         : files.concat(arr);
     cutouts = [];
@@ -333,6 +406,9 @@
                 : `${files.length} PDF(s). Updating merge preview...`
             );
             if (files.length >= 2) scheduleAutoRun(200);
+          } else if (tool === "split-pdf") {
+            setStatus("Updating split preview...");
+            scheduleAutoRun(200);
           } else {
             setStatus(`${files.length} image(s). Updating preview...`);
             scheduleAutoRun(200);
@@ -452,6 +528,18 @@
             </label>
           </div>
         </div>`;
+    } else if (tool === "split-pdf") {
+      controls.innerHTML = `
+        <label>Split mode
+          <select id="splitMode">
+            <option value="each" selected>Every page as its own PDF</option>
+            <option value="range">Extract page range as one PDF</option>
+          </select>
+        </label>
+        <label id="splitRangeWrap" hidden>Pages (example 1-3,5)
+          <input type="text" id="splitRange" placeholder="1-3,5" />
+        </label>
+        <p class="control-hint">Preview shows pages of your PDF. Download creates separate files or one extracted PDF.</p>`;
     } else {
       controls.innerHTML = "";
     }
@@ -475,6 +563,7 @@
       const evt = el.type === "range" || el.type === "number" ? "input" : "change";
       el.addEventListener(evt, () => {
         if (el.id === "compressMode") syncCompressControls();
+        if (el.id === "splitMode") syncSplitControls();
         if (!files.length) return;
         if (tool === "blur-faces" && privacyMode() === "manual") {
           if ((el.id === "blurAmount" || el.id === "brushSize") && manual.source) {
@@ -486,6 +575,7 @@
         scheduleAutoRun(el.type === "range" || el.id === "targetSize" ? 450 : 300);
       });
     });
+    if (tool === "split-pdf") syncSplitControls();
 
     if (tool === "bg-remove") {
       controls.querySelectorAll(".bg-swatch[data-bg]").forEach((btn) => {
@@ -520,6 +610,33 @@
     const clearBtn = document.getElementById("clearMaskBtn");
     if (brushWrap) brushWrap.hidden = !manualOn;
     if (clearBtn) clearBtn.hidden = !manualOn;
+  }
+
+  function syncSplitControls() {
+    const mode = document.getElementById("splitMode")?.value || "each";
+    const wrap = document.getElementById("splitRangeWrap");
+    if (wrap) wrap.hidden = mode !== "range";
+  }
+
+  function parsePageRanges(input, maxPages) {
+    const text = String(input || "").trim();
+    if (!text) return [];
+    const selected = new Set();
+    text.split(",").forEach((part) => {
+      const chunk = part.trim();
+      if (!chunk) return;
+      if (chunk.includes("-")) {
+        const [a, b] = chunk.split("-").map((n) => Number(n.trim()));
+        if (!Number.isFinite(a) || !Number.isFinite(b)) return;
+        const start = Math.max(1, Math.min(a, b));
+        const end = Math.min(maxPages, Math.max(a, b));
+        for (let i = start; i <= end; i += 1) selected.add(i);
+      } else {
+        const n = Number(chunk);
+        if (Number.isFinite(n) && n >= 1 && n <= maxPages) selected.add(n);
+      }
+    });
+    return [...selected].sort((a, b) => a - b);
   }
 
   function setBgColor(value) {
@@ -610,6 +727,9 @@
           break;
         case "merge-pdf":
           await mergePdfs();
+          break;
+        case "split-pdf":
+          await splitPdf();
           break;
         case "pdf-to-word":
           await pdfToWord();
@@ -1346,13 +1466,24 @@
       summary.push({ name: file.name, pages: indices.length });
     }
 
+    const mergedBytes = await out.save();
     const totalPages = summary.reduce((total, item) => total + item.pages, 0);
-    queueFile(await out.save(), "merged.pdf", "application/pdf");
+    queueFile(mergedBytes, "merged.pdf", "application/pdf");
+
+    setStatus("Building page preview...");
+    let gallery = "";
+    try {
+      const preview = await renderPdfThumbnails(mergedBytes, 12, 0.8);
+      gallery = buildThumbGalleryHtml(preview.thumbs, preview.total, "Page");
+    } catch (err) {
+      gallery = `<p class="docx-preview-note">Page images could not be rendered, but your merged PDF is ready to download.</p>`;
+    }
+
     previewHtml = `<div class="word-pdf-preview">
         <div class="preview-file-card preview-file-card--pdf">
           <strong>${files.length} PDFs → 1 file</strong>
           <span>merged.pdf · ${totalPages} page${totalPages === 1 ? "" : "s"}</span>
-          <em>Preview order below, then download</em>
+          <em>Preview pages below, then download</em>
         </div>
         <ol class="merge-preview-list">
           ${summary
@@ -1364,6 +1495,77 @@
             )
             .join("")}
         </ol>
+        ${gallery}
+      </div>`;
+  }
+
+  async function splitPdf() {
+    if (typeof PDFLib === "undefined") throw new Error("PDF library missing. Refresh the page.");
+    const file = files[0];
+    if (!file) throw new Error("Choose a PDF file first.");
+
+    const { PDFDocument } = PDFLib;
+    let src;
+    try {
+      src = await PDFDocument.load(await file.arrayBuffer(), { ignoreEncryption: true });
+    } catch (err) {
+      throw new Error(`Could not read "${file.name}". Try an unlocked PDF.`);
+    }
+
+    const totalPages = src.getPageCount();
+    if (!totalPages) throw new Error("This PDF has no pages.");
+
+    const mode = document.getElementById("splitMode")?.value || "each";
+    const base = CZImage.baseName(file);
+    const bytes = new Uint8Array(await file.arrayBuffer());
+
+    setStatus("Building page preview...");
+    let gallery = "";
+    try {
+      const preview = await renderPdfThumbnails(bytes, 16, 0.75);
+      gallery = buildThumbGalleryHtml(preview.thumbs, preview.total, "Page");
+    } catch (err) {
+      gallery = `<p class="docx-preview-note">Page images could not be rendered, but split files are ready.</p>`;
+    }
+
+    if (mode === "range") {
+      const pages = parsePageRanges(document.getElementById("splitRange")?.value || "", totalPages);
+      if (!pages.length) {
+        throw new Error("Enter pages to extract, for example 1-3,5.");
+      }
+      const out = await PDFDocument.create();
+      const copied = await out.copyPages(
+        src,
+        pages.map((n) => n - 1)
+      );
+      copied.forEach((page) => out.addPage(page));
+      queueFile(await out.save(), `${base}-pages-${pages[0]}-${pages[pages.length - 1]}.pdf`, "application/pdf");
+      previewHtml = `<div class="word-pdf-preview">
+          <div class="preview-file-card preview-file-card--pdf">
+            <strong>Extracted ${pages.length} page${pages.length === 1 ? "" : "s"}</strong>
+            <span>${escapeHtml(base)}-pages-${pages[0]}-${pages[pages.length - 1]}.pdf</span>
+            <em>Source has ${totalPages} pages · preview below</em>
+          </div>
+          ${gallery}
+        </div>`;
+      return;
+    }
+
+    for (let pageNumber = 1; pageNumber <= totalPages; pageNumber += 1) {
+      setStatus(`Splitting page ${pageNumber} of ${totalPages}...`);
+      const out = await PDFDocument.create();
+      const [copied] = await out.copyPages(src, [pageNumber - 1]);
+      out.addPage(copied);
+      queueFile(await out.save(), `${base}-page-${pageNumber}.pdf`, "application/pdf");
+    }
+
+    previewHtml = `<div class="word-pdf-preview">
+        <div class="preview-file-card preview-file-card--pdf">
+          <strong>${totalPages} page PDF${totalPages === 1 ? "" : "s"} ready</strong>
+          <span>${escapeHtml(base)}-page-1.pdf …</span>
+          <em>Download saves each page as its own PDF</em>
+        </div>
+        ${gallery}
       </div>`;
   }
 
