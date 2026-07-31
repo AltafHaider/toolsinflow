@@ -84,7 +84,7 @@ $needsPdfForms = $id === 'pdf-form-creator';
   <?php cz_render_footer(); ?>
   <script src="<?= $assetBase ?>/js/app.js?v=41"></script>
   <?php if ($tool && $needsPdfForms): ?>
-  <script src="<?= $assetBase ?>/js/pdf-form-editor.js?v=12"></script>
+  <script src="<?= $assetBase ?>/js/pdf-form-editor.js?v=13"></script>
   <?php elseif ($tool): ?>
   <script src="<?= $assetBase ?>/js/image-core.js?v=20"></script>
   <script src="<?= $assetBase ?>/js/tools.js?v=39"></script>

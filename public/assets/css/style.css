@@ -2265,6 +2265,11 @@ html.pdf-plain-cursor textarea {
   background: var(--surface);
 }
 
+.pdf-form-start[hidden],
+.pdf-form-editor[hidden] {
+  display: none !important;
+}
+
 .pdf-form-start .pdf-dropzone {
   width: 100%;
 }

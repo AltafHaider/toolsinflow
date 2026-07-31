@@ -31,8 +31,10 @@
   const signatureError = document.getElementById("pdfSignatureError");
   const useSignatureBtn = document.getElementById("pdfUseSignature");
 
-  pdfjsLib.GlobalWorkerOptions.workerSrc =
-    "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+  if (typeof pdfjsLib !== "undefined") {
+    pdfjsLib.GlobalWorkerOptions.workerSrc =
+      "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+  }
 
   let sourceBytes = null;
   let sourcePdf = null;
@@ -131,6 +133,10 @@
       setStatus("Please choose a PDF file.", "error");
       return;
     }
+    if (typeof pdfjsLib === "undefined") {
+      setStatus("PDF viewer failed to load. Check your connection and refresh.", "error");
+      return;
+    }
     try {
       setStatus("Opening PDF...");
       const buffer = await file.arrayBuffer();
@@ -151,7 +157,6 @@
       fields = [];
       history = [];
       future = [];
-      document.getElementById("pdfFileName")?.textContent = file.name;
       openEditor();
       setStatus(`${pages.length} page(s) ready. Add fields from the toolbar.`, "ok");
     } catch (error) {
@@ -167,7 +172,6 @@
     fields = [];
     history = [];
     future = [];
-    document.getElementById("pdfFileName")?.textContent = "blank-form.pdf";
     openEditor();
     setStatus("Blank A4 document ready.", "ok");
   }
