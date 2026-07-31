@@ -251,9 +251,39 @@
     { id: "pink", label: "Pink", value: "#f9a8d4" },
   ];
 
+  function syncCompressControls() {
+    const mode = document.getElementById("compressMode")?.value || "quality";
+    const qualityWrap = document.getElementById("qualityWrap");
+    const targetWrap = document.getElementById("targetWrap");
+    if (qualityWrap) qualityWrap.hidden = mode !== "quality";
+    if (targetWrap) targetWrap.hidden = mode !== "size";
+  }
+
   function buildControls() {
     if (tool === "compress-image") {
-      controls.innerHTML = `<label>Quality <input type="range" id="quality" min="0.4" max="0.95" step="0.01" value="0.8" /></label>`;
+      controls.innerHTML = `
+        <div class="compress-controls">
+          <label>Mode
+            <select id="compressMode">
+              <option value="quality">Quality</option>
+              <option value="size" selected>Target file size</option>
+            </select>
+          </label>
+          <label id="qualityWrap" hidden>Quality
+            <input type="range" id="quality" min="0.4" max="0.95" step="0.01" value="0.8" />
+          </label>
+          <label id="targetWrap" class="target-size-wrap">Target size
+            <span class="target-size-inputs">
+              <input type="number" id="targetSize" min="1" step="1" value="200" />
+              <select id="targetUnit">
+                <option value="kb" selected>KB</option>
+                <option value="mb">MB</option>
+              </select>
+            </span>
+          </label>
+        </div>
+        <p class="control-hint">Tip: enter the size you want (example 200 KB), then download the compressed JPG. The full image is kept. No objects are removed.</p>`;
+      syncCompressControls();
     } else if (tool === "resize-image") {
       controls.innerHTML = `
         <label>Width <input type="number" id="width" min="1" placeholder="1920" /></label>
@@ -341,6 +371,7 @@
       if (el.id === "bgCustom" || el.name === "privacyMode") return;
       const evt = el.type === "range" || el.type === "number" ? "input" : "change";
       el.addEventListener(evt, () => {
+        if (el.id === "compressMode") syncCompressControls();
         if (!files.length) return;
         if (tool === "blur-faces" && privacyMode() === "manual") {
           if ((el.id === "blurAmount" || el.id === "brushSize") && manual.source) {
@@ -349,7 +380,7 @@
           return;
         }
         setStatus("Updating preview...");
-        scheduleAutoRun(el.type === "range" ? 450 : 300);
+        scheduleAutoRun(el.type === "range" || el.id === "targetSize" ? 450 : 300);
       });
     });
 
@@ -424,12 +455,13 @@
     const token = ++runToken;
     busy = true;
     clearPreview();
-    setStatus(tool === "bg-remove" ? "Removing background..." : "Working...");
+    setStatus(tool === "bg-remove" ? "Removing background..." : tool === "compress-image" ? "Compressing image..." : "Working...");
+    let doneMessage = "Preview ready. Download if it looks good.";
 
     try {
       switch (tool) {
         case "compress-image":
-          await compressImages();
+          doneMessage = await compressImages();
           break;
         case "resize-image":
           await resizeImages();
@@ -496,7 +528,7 @@
         }
       }
       showPreviewPanel();
-      setStatus("Preview ready. Download if it looks good.", "ok");
+      setStatus(doneMessage || "Preview ready. Download if it looks good.", "ok");
     } finally {
       if (token === runToken) {
         busy = false;
@@ -762,21 +794,46 @@
     }
   }
 
+  function compressTargetBytes() {
+    const amount = Math.max(1, Number(document.getElementById("targetSize")?.value || 200));
+    const unit = document.getElementById("targetUnit")?.value || "kb";
+    return Math.round(amount * (unit === "mb" ? 1024 * 1024 : 1024));
+  }
+
   async function compressImages() {
-    const quality = Number(document.getElementById("quality").value || 0.8);
+    const mode = document.getElementById("compressMode")?.value || "quality";
+    const quality = Number(document.getElementById("quality")?.value || 0.8);
+    const targetBytes = compressTargetBytes();
+    const notes = [];
+
     for (const file of files) {
-      const img = await CZImage.loadImage(file);
-      const canvas = CZImage.resizeCanvas(img, img.naturalWidth, img.naturalHeight, false);
-      const tmp = document.createElement("canvas");
-      tmp.width = canvas.width;
-      tmp.height = canvas.height;
-      const ctx = tmp.getContext("2d");
-      ctx.fillStyle = "#fff";
-      ctx.fillRect(0, 0, tmp.width, tmp.height);
-      ctx.drawImage(canvas, 0, 0);
-      const blob = await CZImage.exportCanvas(tmp, "image/jpeg", quality);
+      const source = await CZImage.loadBitmap(file);
+      const size = {
+        width: source.naturalWidth || source.width,
+        height: source.naturalHeight || source.height,
+      };
+      // Keep full frame. White fill only under transparent pixels for JPEG (never crops/removes objects).
+      const canvas = CZImage.imageToCanvas(source, size.width, size.height, "#ffffff");
+      if (typeof source.close === "function") source.close();
+
+      let blob;
+      let detail = "";
+      if (mode === "size") {
+        const result = await CZImage.compressToTarget(canvas, targetBytes);
+        blob = result.blob;
+        const scalePct = Math.round((result.scale || 1) * 100);
+        detail = `${CZImage.formatBytes(file.size)} → ${CZImage.formatBytes(blob.size)} (target ${CZImage.formatBytes(targetBytes)}${scalePct < 100 ? `, resized to ${scalePct}%` : ""})`;
+      } else {
+        blob = await CZImage.encodeJpeg(canvas, quality, 1);
+        detail = `${CZImage.formatBytes(file.size)} → ${CZImage.formatBytes(blob.size)} (quality ${Math.round(quality * 100)}%)`;
+      }
+
+      notes.push(`${file.name}: ${detail}`);
       queueFile(blob, `${CZImage.baseName(file)}-compressed.jpg`, "image/jpeg");
     }
+
+    if (notes.length === 1) return `${notes[0]}. Ready to download.`;
+    return `${notes.length} images compressed. Ready to download.`;
   }
 
   async function resizeImages() {

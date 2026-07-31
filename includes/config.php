@@ -32,7 +32,7 @@ return [
         ],
         'compress-image' => [
             'name' => 'Compress Image',
-            'desc' => 'Reduce image file size with quality control.',
+            'desc' => 'Reduce image file size by quality or a target KB/MB size. Keeps the full image. No objects are removed.',
             'cat'  => 'optimize',
         ],
         'resize-image' => [

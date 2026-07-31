@@ -1595,6 +1595,44 @@ button, .primary {
   color: var(--ink);
 }
 
+.compress-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1rem;
+  align-items: center;
+  width: 100%;
+}
+
+.compress-controls label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.target-size-inputs {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.target-size-inputs input[type="number"] {
+  width: 6.5rem;
+}
+
+.control-hint {
+  width: 100%;
+  margin: 0.15rem 0 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+#qualityWrap[hidden],
+#targetWrap[hidden] {
+  display: none !important;
+}
+
 .status {
   margin-top: 0.85rem;
   color: var(--muted);

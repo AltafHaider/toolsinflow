@@ -164,7 +164,7 @@ function cz_render_head(string $title, string $description, string $path = '/', 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Urbanist:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="<?= $assetBase ?>/css/style.css?v=65" />
+  <link rel="stylesheet" href="<?= $assetBase ?>/css/style.css?v=66" />
   <link rel="preconnect" href="https://images.unsplash.com" crossorigin />
   <script type="application/ld+json">
   <?= json_encode([

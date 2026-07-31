@@ -94,8 +94,8 @@ $needsStudyPpt = $id === 'study-ppt';
   <?php elseif ($tool && $needsStudyPpt): ?>
   <script src="<?= $assetBase ?>/js/study-ppt.js?v=1"></script>
   <?php elseif ($tool): ?>
-  <script src="<?= $assetBase ?>/js/image-core.js?v=20"></script>
-  <script src="<?= $assetBase ?>/js/tools.js?v=39"></script>
+  <script src="<?= $assetBase ?>/js/image-core.js?v=21"></script>
+  <script src="<?= $assetBase ?>/js/tools.js?v=40"></script>
   <?php endif; ?>
 </body>
 </html>
