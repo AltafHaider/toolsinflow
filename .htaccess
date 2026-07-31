@@ -1,0 +1,45 @@
+# If subdomain document root is the project root (not /public),
+# route traffic into /public. Prefer setting document root to /public.
+
+Options -Indexes
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+
+  # Redirect old, directly accessed /public URLs to clean root URLs.
+  RewriteCond %{THE_REQUEST} \s/+public(?:/([^\s?]*))? [NC]
+  RewriteRule ^public(?:/(.*))?$ /$1 [R=301,L,NE]
+
+  # Never expose private folders directly
+  RewriteRule ^(includes)/ - [F,L]
+
+  # Clean routes when document root is the project root
+  RewriteRule ^$ public/index.php [L]
+  RewriteRule ^sitemap\.xml$ public/sitemap.php [L]
+  RewriteRule ^about/?$ public/about.php [L]
+  RewriteRule ^contact/?$ public/contact.php [L]
+  RewriteRule ^privacy/?$ public/privacy.php [L]
+  RewriteRule ^terms/?$ public/terms.php [L]
+
+  # Old .php URLs → clean URLs
+  RewriteCond %{THE_REQUEST} \s/+about\.php[\s?] [NC]
+  RewriteRule ^about\.php$ /about [R=301,L]
+  RewriteCond %{THE_REQUEST} \s/+contact\.php[\s?] [NC]
+  RewriteRule ^contact\.php$ /contact [R=301,L]
+  RewriteCond %{THE_REQUEST} \s/+privacy\.php[\s?] [NC]
+  RewriteRule ^privacy\.php$ /privacy [R=301,L]
+  RewriteCond %{THE_REQUEST} \s/+terms\.php[\s?] [NC]
+  RewriteRule ^terms\.php$ /terms [R=301,L]
+  RewriteCond %{THE_REQUEST} \s/+tool\.php\?t=([a-z0-9\-]+)[^\s]*\s [NC]
+  RewriteRule ^tool\.php$ /%1? [R=301,L]
+
+  # Pass through real files under public/
+  RewriteCond %{DOCUMENT_ROOT}/public/$1 -f
+  RewriteRule ^(.*)$ public/$1 [L]
+
+  # Tool clean URLs → tool.php
+  RewriteRule ^([a-z0-9\-]+)/?$ public/tool.php?t=$1 [L,QSA]
+
+  # Fallback
+  RewriteRule ^(.*)$ public/$1 [L]
+</IfModule>

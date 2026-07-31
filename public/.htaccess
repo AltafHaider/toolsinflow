@@ -1,0 +1,62 @@
+# Production / subdomain document root = public/
+
+Options -Indexes
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+
+  # Block hidden files
+  RewriteRule "(^|/)\." - [F]
+
+  # XML sitemap alias
+  RewriteRule ^sitemap\.xml$ sitemap.php [L]
+
+  # Redirect old .php page URLs to clean URLs
+  RewriteCond %{THE_REQUEST} \s/+about\.php[\s?] [NC]
+  RewriteRule ^about\.php$ /about [R=301,L]
+  RewriteCond %{THE_REQUEST} \s/+contact\.php[\s?] [NC]
+  RewriteRule ^contact\.php$ /contact [R=301,L]
+  RewriteCond %{THE_REQUEST} \s/+privacy\.php[\s?] [NC]
+  RewriteRule ^privacy\.php$ /privacy [R=301,L]
+  RewriteCond %{THE_REQUEST} \s/+terms\.php[\s?] [NC]
+  RewriteRule ^terms\.php$ /terms [R=301,L]
+
+  # Redirect old tool.php?t=slug URLs to /slug
+  RewriteCond %{THE_REQUEST} \s/+tool\.php\?t=([a-z0-9\-]+)[^\s]*\s [NC]
+  RewriteRule ^tool\.php$ /%1? [R=301,L]
+
+  # Clean page routes
+  RewriteRule ^about/?$ about.php [L]
+  RewriteRule ^contact/?$ contact.php [L]
+  RewriteRule ^privacy/?$ privacy.php [L]
+  RewriteRule ^terms/?$ terms.php [L]
+
+  # Keep existing files/directories accessible
+  RewriteCond %{REQUEST_FILENAME} -f [OR]
+  RewriteCond %{REQUEST_FILENAME} -d
+  RewriteRule ^ - [L]
+
+  # Clean tool routes: /pdf-to-word, /bg-remove, etc.
+  RewriteRule ^([a-z0-9\-]+)/?$ tool.php?t=$1 [L,QSA]
+
+  # Front controller fallback
+  RewriteRule ^ index.php [L]
+</IfModule>
+
+<IfModule mod_php.c>
+  php_value max_execution_time 600
+  php_value max_input_time 600
+  php_value memory_limit 512M
+  php_value post_max_size 8M
+</IfModule>
+
+<IfModule mod_php8.c>
+  php_value max_execution_time 600
+  php_value max_input_time 600
+  php_value memory_limit 512M
+</IfModule>
+
+# Helpful for long downloads behind proxies
+<IfModule mod_reqtimeout.c>
+  RequestReadTimeout header=60 body=600
+</IfModule>
