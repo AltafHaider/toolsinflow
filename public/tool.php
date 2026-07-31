@@ -20,8 +20,10 @@ if ($id === '' || !isset($tools[$id])) {
 
 $needsPdfLib = $id === 'images-to-pdf';
 $needsPdfToWord = $id === 'pdf-to-word';
+$needsWordToPdf = $id === 'word-to-pdf';
 $needsPdfForms = $id === 'pdf-form-creator';
 $needsStudyPpt = $id === 'study-ppt';
+$isDocExchange = $needsPdfToWord || $needsWordToPdf;
 ?>
 <!DOCTYPE html>
 <html lang="en" data-theme="light">
@@ -33,6 +35,10 @@ $needsStudyPpt = $id === 'study-ppt';
   <?php if ($tool && $needsPdfToWord): ?>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
   <script src="https://unpkg.com/docx@8.5.0/build/index.umd.js"></script>
+  <?php endif; ?>
+  <?php if ($tool && $needsWordToPdf): ?>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.8.0/mammoth.browser.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
   <?php endif; ?>
   <?php if ($tool && $needsPdfForms): ?>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
@@ -66,9 +72,33 @@ $needsStudyPpt = $id === 'study-ppt';
     <main class="container">
       <div class="workspace" id="workspace" data-tool="<?= cz_h($id) ?>">
         <div class="dropzone" id="dropzone" tabindex="0">
-          <strong><?= $needsPdfToWord ? 'Drop a PDF here or click to choose' : 'Drop images here or click to choose' ?></strong>
-          <span id="dropHint"><?= $needsPdfToWord ? 'Normal or scanned PDF files' : 'JPG, PNG or WebP' ?></span>
-          <input type="file" id="fileInput" hidden accept="<?= $needsPdfToWord ? 'application/pdf,.pdf' : 'image/*' ?>"<?= $needsPdfToWord ? '' : ' multiple' ?> />
+          <strong><?php
+            if ($needsPdfToWord) {
+                echo 'Drop a PDF here or click to choose';
+            } elseif ($needsWordToPdf) {
+                echo 'Drop a Word file here or click to choose';
+            } else {
+                echo 'Drop images here or click to choose';
+            }
+          ?></strong>
+          <span id="dropHint"><?php
+            if ($needsPdfToWord) {
+                echo 'Normal or scanned PDF files';
+            } elseif ($needsWordToPdf) {
+                echo 'Word .docx files';
+            } else {
+                echo 'JPG, PNG or WebP';
+            }
+          ?></span>
+          <input type="file" id="fileInput" hidden accept="<?php
+            if ($needsPdfToWord) {
+                echo 'application/pdf,.pdf';
+            } elseif ($needsWordToPdf) {
+                echo '.docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+            } else {
+                echo 'image/*';
+            }
+          ?>"<?= $isDocExchange ? '' : ' multiple' ?> />
         </div>
         <ul class="file-list" id="fileList"></ul>
         <div class="controls" id="controls"></div>
@@ -95,7 +125,7 @@ $needsStudyPpt = $id === 'study-ppt';
   <script src="<?= $assetBase ?>/js/study-ppt.js?v=1"></script>
   <?php elseif ($tool): ?>
   <script src="<?= $assetBase ?>/js/image-core.js?v=21"></script>
-  <script src="<?= $assetBase ?>/js/tools.js?v=40"></script>
+  <script src="<?= $assetBase ?>/js/tools.js?v=41"></script>
   <?php endif; ?>
 </body>
 </html>

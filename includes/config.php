@@ -25,6 +25,11 @@ return [
             'desc' => 'Convert a text-based PDF into an editable Word document.',
             'cat'  => 'pdf',
         ],
+        'word-to-pdf' => [
+            'name' => 'Word to PDF',
+            'desc' => 'Convert a Word (.docx) document into a PDF. Preview first, then download.',
+            'cat'  => 'pdf',
+        ],
         'study-ppt' => [
             'name' => 'Study PPT Maker',
             'desc' => 'Enter a topic or paste study notes to create an editable PowerPoint with simple student-friendly slides and 10 design templates.',

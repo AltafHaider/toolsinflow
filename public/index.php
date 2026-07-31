@@ -9,7 +9,7 @@ foreach ($tools as $id => $tool) {
     $byCat[$tool['cat']][$id] = $tool;
 }
 
-$featured = ['study-ppt', 'pdf-form-creator', 'pdf-to-word', 'bg-remove', 'blur-faces', 'compress-image'];
+$featured = ['study-ppt', 'pdf-form-creator', 'pdf-to-word', 'word-to-pdf', 'bg-remove', 'compress-image'];
 ?>
 <!DOCTYPE html>
 <html lang="en" data-theme="light">
@@ -83,6 +83,7 @@ $featured = ['study-ppt', 'pdf-form-creator', 'pdf-to-word', 'bg-remove', 'blur-
                 ['label' => 'Blur faces', 'href' => cz_tool_url('blur-faces')],
                 ['label' => 'PDF Form Creator', 'href' => cz_tool_url('pdf-form-creator')],
                 ['label' => 'PDF to Word', 'href' => cz_tool_url('pdf-to-word')],
+                ['label' => 'Word to PDF', 'href' => cz_tool_url('word-to-pdf')],
                 ['label' => 'Compress image', 'href' => cz_tool_url('compress-image')],
                 ['label' => 'Image to SVG', 'href' => cz_tool_url('image-to-svg')],
             ], JSON_UNESCAPED_SLASHES)) ?>'
@@ -266,6 +267,15 @@ $featured = ['study-ppt', 'pdf-form-creator', 'pdf-to-word', 'bg-remove', 'blur-
   <section class="section container" id="tools">
     <h2>All tools</h2>
     <p class="section-lede">Every utility in one place, organized by what you need to do.</p>
+
+    <div class="tools-search-bar" data-tools-page-search>
+      <label class="tools-search-field">
+        <span class="sr-only">Filter tools</span>
+        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M20 20l-3.5-3.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        <input type="search" id="toolsPageSearch" placeholder="Search tools by name or job..." autocomplete="off" spellcheck="false" />
+      </label>
+      <p class="tools-search-empty" id="toolsSearchEmpty" hidden>No tools match that search. Try compress, PDF, blur, or PPT.</p>
+    </div>
 
     <?php
       $imageCats = ['optimize', 'convert', 'edit', 'effects'];

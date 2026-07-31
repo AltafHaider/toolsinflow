@@ -97,6 +97,7 @@ function cz_tool_icon(string $id): string
     $icons = [
         'pdf-form-creator' => '<path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4M8 11h7M8 15h3"/><rect x="13" y="13" width="3" height="3" rx=".4"/>',
         'pdf-to-word' => '<path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4M8.5 11l1.5 6 2-4 2 4 1.5-6"/>',
+        'word-to-pdf' => '<path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4M9 12h6M9 15h5"/><path d="M8.5 11l1.5 5 1.5-3 1.5 3 1.5-5"/>',
         'compress-image' => '<path d="M8 3h8v6H8zM8 15h8v6H8zM5 10h14v4H5z"/>',
         'resize-image' => '<path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/><rect x="8" y="8" width="8" height="8" rx="1"/>',
         'bg-remove' => '<path d="M4 19l5-6.5a2.2 2.2 0 013.4 0L18 19"/><circle cx="9" cy="8" r="2.2"/><path d="M16.5 6.5l4 4M20.5 6.5l-4 4"/>',
@@ -142,7 +143,7 @@ function cz_render_head(string $title, string $description, string $path = '/', 
   <meta name="theme-color" content="#f4f7f5" />
   <title><?= cz_h($title) ?></title>
   <meta name="description" content="<?= cz_h($description) ?>" />
-  <meta name="keywords" content="toolsinflow, free online tools, all-in-one toolkit, image tools, pdf tools, compress image, convert files, remove background, resize image, blur faces, pdf form creator, pdf to word" />
+  <meta name="keywords" content="toolsinflow, free online tools, all-in-one toolkit, image tools, pdf tools, compress image, convert files, remove background, resize image, blur faces, pdf form creator, pdf to word, word to pdf" />
   <meta name="author" content="<?= $appName ?>" />
   <meta name="robots" content="<?= cz_h($robots) ?>" />
   <meta name="googlebot" content="index, follow" />
@@ -164,7 +165,7 @@ function cz_render_head(string $title, string $description, string $path = '/', 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Urbanist:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="<?= $assetBase ?>/css/style.css?v=66" />
+  <link rel="stylesheet" href="<?= $assetBase ?>/css/style.css?v=67" />
   <link rel="preconnect" href="https://images.unsplash.com" crossorigin />
   <script type="application/ld+json">
   <?= json_encode([
@@ -270,6 +271,32 @@ function cz_nav_tools_by_group(): array
     return $out;
 }
 
+function cz_tools_index(): array
+{
+    global $config;
+
+    $tools = $config['tools'] ?? [];
+    $categories = $config['categories'] ?? [];
+    $index = [];
+
+    foreach ($tools as $id => $tool) {
+        $cat = (string) ($tool['cat'] ?? '');
+        $name = (string) ($tool['name'] ?? $id);
+        $desc = (string) ($tool['desc'] ?? '');
+        $index[] = [
+            'id' => (string) $id,
+            'name' => $name,
+            'desc' => $desc,
+            'cat' => $cat,
+            'catLabel' => (string) ($categories[$cat] ?? ucfirst($cat)),
+            'url' => cz_tool_url((string) $id),
+            'keywords' => trim($name . ' ' . $desc . ' ' . $cat . ' ' . str_replace('-', ' ', (string) $id)),
+        ];
+    }
+
+    return $index;
+}
+
 function cz_render_header(string $active = ''): void
 {
     global $appName, $assetBase;
@@ -281,6 +308,14 @@ function cz_render_header(string $active = ''): void
         <img src="<?= $assetBase ?>/img/logo.svg?v=2" alt="<?= $appName ?>" width="42" height="42" />
         <span class="logo-text">Tools<span>In</span>Flow</span>
       </a>
+      <div class="header-search" data-tool-search>
+        <label class="header-search-field">
+          <span class="sr-only">Search tools</span>
+          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M20 20l-3.5-3.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+          <input type="search" id="toolSearch" placeholder="Search any tool..." autocomplete="off" spellcheck="false" />
+        </label>
+        <div class="header-search-results" id="toolSearchResults" hidden role="listbox" aria-label="Tool search results"></div>
+      </div>
       <div class="header-actions">
         <button type="button" class="theme-toggle" id="themeToggle" aria-label="Toggle theme">☀</button>
         <button type="button" class="menu-toggle" id="menuToggle" aria-label="Menu" aria-expanded="false"><span></span><span></span><span></span></button>
@@ -348,5 +383,9 @@ function cz_render_footer(): void
   </div>
   <div class="cursor-dot" id="cursorDot" aria-hidden="true"></div>
   <div class="cursor-ring" id="cursorRing" aria-hidden="true"></div>
+  <script>
+    window.TOOLS_INDEX = <?= json_encode(cz_tools_index(), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP) ?>;
+  </script>
+  <script src="<?= $assetBase ?>/js/tool-search.js?v=2"></script>
     <?php
 }

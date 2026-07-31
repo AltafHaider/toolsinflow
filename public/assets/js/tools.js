@@ -59,8 +59,13 @@
       "image-to-svg": "Download SVG",
       "images-to-pdf": "Download PDF",
       "pdf-to-word": "Download Word",
+      "word-to-pdf": "Download PDF",
     };
     return map[tool] || "Download file";
+  }
+
+  function isDocExchangeTool() {
+    return tool === "pdf-to-word" || tool === "word-to-pdf";
   }
 
   function setStatus(msg, type = "") {
@@ -92,34 +97,81 @@
     setDownloadEnabled(false);
   }
 
+  function isImageFile(file) {
+    const type = file?.blob?.type || "";
+    const name = file?.name || "";
+    return type.startsWith("image/") || /\.(png|jpe?g|webp|gif)$/i.test(name);
+  }
+
+  function isSvgFile(file) {
+    const type = file?.blob?.type || "";
+    const name = file?.name || "";
+    return type.includes("svg") || /\.svg$/i.test(name);
+  }
+
+  function isPdfFile(file) {
+    const type = file?.blob?.type || "";
+    const name = file?.name || "";
+    return type.includes("pdf") || /\.pdf$/i.test(name);
+  }
+
+  function buildPendingPreviewHtml() {
+    if (previewHtml) return previewHtml;
+    if (!pendingFiles.length) return "";
+
+    const check = tool === "bg-remove" && bgColor === "transparent" ? " is-checkered" : "";
+    const images = pendingFiles.filter(isImageFile);
+    if (images.length > 1) {
+      return `<div class="preview-gallery">${images
+        .map(
+          (file, index) => `
+          <figure class="preview-gallery-item">
+            <img class="preview-image${check}" src="${URL.createObjectURL(file.blob)}" alt="Preview ${index + 1}" />
+            <figcaption>${index + 1}. ${file.name}</figcaption>
+          </figure>`
+        )
+        .join("")}</div>`;
+    }
+
+    const first = pendingFiles[0];
+    if (isSvgFile(first)) {
+      return `<p class="preview-empty">SVG preview ready. Use Download below.</p>`;
+    }
+    if (isImageFile(first)) {
+      return `<img class="preview-image${check}" src="${URL.createObjectURL(first.blob)}" alt="Preview" />`;
+    }
+    if (isPdfFile(first)) {
+      return `<div class="preview-file-card">
+        <strong>PDF ready</strong>
+        <span>${first.name}</span>
+        <em>${pendingFiles.length} file(s) · preview before download</em>
+      </div>`;
+    }
+    return `<div class="preview-file-card">
+      <strong>File ready</strong>
+      <span>${first.name}</span>
+      <em>Preview mode · download when it looks good</em>
+    </div>`;
+  }
+
   function showPreviewPanel(extraHtml = "") {
     const panel = document.getElementById("resultPreview");
     const stage = document.getElementById("previewStage");
     if (!panel || !stage) return;
     panel.hidden = false;
     const head = panel.querySelector(".preview-head h3");
-    if (head) head.textContent = "Preview";
+    if (head) head.textContent = pendingFiles.length > 1 ? `Preview (${pendingFiles.length})` : "Preview";
 
-    let body = previewHtml;
-    if (!body && pendingFiles.length) {
-      const first = pendingFiles[0];
-      if ((first.blob.type || "").includes("svg") || /\.svg$/i.test(first.name || "")) {
-        body = `<p class="preview-empty">SVG ready. Use Download below.</p>`;
-      } else if ((first.blob.type || "").startsWith("image/") || /\.(png|jpe?g|webp)$/i.test(first.name || "")) {
-        const check =
-          tool === "bg-remove" && bgColor === "transparent" ? " is-checkered" : "";
-        body = `<img class="preview-image${check}" src="${URL.createObjectURL(first.blob)}" alt="Preview" />`;
-      } else {
-        body = `<p class="preview-empty">File ready. Use Download below.</p>`;
-      }
-    }
-
-    stage.innerHTML = `${extraHtml || ""}${body || `<p class="preview-empty">Your result will show here.</p>`}`;
+    const body = buildPendingPreviewHtml();
+    stage.innerHTML = `${extraHtml || ""}${body || `<p class="preview-empty">Your result will show here before download.</p>`}`;
     setDownloadEnabled(pendingFiles.length > 0);
   }
 
   function acceptAttr() {
     if (tool === "pdf-to-word") return "application/pdf,.pdf";
+    if (tool === "word-to-pdf") {
+      return ".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+    }
     if (tool === "jpg-to-png" || tool === "jpg-to-webp") return "image/jpeg,.jpg,.jpeg";
     if (tool === "png-to-jpg" || tool === "png-to-webp") return "image/png,.png";
     if (tool === "webp-to-jpg" || tool === "webp-to-png") return "image/webp,.webp";
@@ -152,10 +204,12 @@
   }
 
   fileInput.accept = acceptAttr();
-  fileInput.multiple = tool !== "pdf-to-word";
+  fileInput.multiple = !isDocExchangeTool();
   dropHint.textContent =
     tool === "pdf-to-word"
       ? "One PDF file. Text remains editable in Word."
+      : tool === "word-to-pdf"
+      ? "One Word .docx file. Preview the PDF before download."
       : tool === "blur-faces"
       ? "JPG, PNG or WebP. Auto blur faces, or paint areas to blur."
       : "You can select multiple images";
@@ -197,15 +251,32 @@
       setStatus("Please choose a PDF file.", "error");
       return;
     }
+    if (tool === "word-to-pdf") {
+      const name = arr[0].name || "";
+      if (/\.doc$/i.test(name) && !/\.docx$/i.test(name)) {
+        setStatus("Older .doc files are not supported. Save as .docx in Word and try again.", "error");
+        return;
+      }
+      if (!/\.docx$/i.test(name)) {
+        setStatus("Please choose a Word .docx file.", "error");
+        return;
+      }
+    }
     files =
-      tool === "pdf-to-word" || (tool === "blur-faces" && privacyMode() === "manual")
+      isDocExchangeTool() || (tool === "blur-faces" && privacyMode() === "manual")
         ? [arr[0]]
         : files.concat(arr);
     cutouts = [];
     manual = { source: null, mask: null, display: null, painting: false, scale: 1 };
     clearPreview();
     renderFiles();
-    setStatus(tool === "pdf-to-word" ? "Reading PDF..." : `${files.length} image(s). Generating preview...`);
+    setStatus(
+      tool === "pdf-to-word"
+        ? "Reading PDF..."
+        : tool === "word-to-pdf"
+        ? "Reading Word document..."
+        : `${files.length} image(s). Generating preview...`
+    );
     scheduleAutoRun(tool === "bg-remove" || tool === "blur-faces" ? 150 : 250);
   }
 
@@ -508,6 +579,9 @@
         case "pdf-to-word":
           await pdfToWord();
           break;
+        case "word-to-pdf":
+          await wordToPdf();
+          break;
         default:
           throw new Error("Unknown tool.");
       }
@@ -515,17 +589,9 @@
       if (token !== runToken) return;
       if (!pendingFiles.length) throw new Error("Nothing to preview.");
 
-      if (!previewHtml && pendingFiles[0]) {
-        const first = pendingFiles[0];
-        const type = first.blob.type || "";
-        if (type.includes("svg") || /\.svg$/i.test(first.name || "")) {
-          const svgText = await first.blob.text();
-          previewHtml = `<div class="preview-svg">${svgText}</div>`;
-        } else if (type.startsWith("image/")) {
-          const check =
-            tool === "bg-remove" && bgColor === "transparent" ? " is-checkered" : "";
-          previewHtml = `<img class="preview-image${check}" src="${URL.createObjectURL(first.blob)}" alt="Preview" />`;
-        }
+      if (!previewHtml && pendingFiles[0] && isSvgFile(pendingFiles[0])) {
+        const svgText = await pendingFiles[0].blob.text();
+        previewHtml = `<div class="preview-svg">${svgText}</div>`;
       }
       showPreviewPanel();
       setStatus(doneMessage || "Preview ready. Download if it looks good.", "ok");
@@ -1223,17 +1289,39 @@
     if (typeof PDFLib === "undefined") throw new Error("PDF library missing. Refresh the page.");
     const { PDFDocument } = PDFLib;
     const out = await PDFDocument.create();
+    const thumbs = [];
     for (const file of files) {
-      const img = await CZImage.loadImage(file);
-      const canvas = CZImage.resizeCanvas(img, img.naturalWidth, img.naturalHeight, false);
+      const source = await CZImage.loadBitmap(file);
+      const size = {
+        width: source.naturalWidth || source.width,
+        height: source.naturalHeight || source.height,
+      };
+      const canvas = CZImage.imageToCanvas(source, size.width, size.height, "#ffffff");
+      if (typeof source.close === "function") source.close();
       const isPng = (file.type || "").includes("png");
       const blob = await CZImage.exportCanvas(canvas, isPng ? "image/png" : "image/jpeg", 0.92);
+      const thumbUrl = URL.createObjectURL(blob);
+      thumbs.push({ name: file.name, url: thumbUrl });
       const bytes = new Uint8Array(await blob.arrayBuffer());
       const embedded = isPng ? await out.embedPng(bytes) : await out.embedJpg(bytes);
       const page = out.addPage([embedded.width, embedded.height]);
       page.drawImage(embedded, { x: 0, y: 0, width: embedded.width, height: embedded.height });
     }
     queueFile(await out.save(), "images.pdf", "application/pdf");
+    previewHtml = `<div class="preview-file-card preview-file-card--pdf">
+        <strong>${files.length} image${files.length === 1 ? "" : "s"} → 1 PDF</strong>
+        <span>images.pdf</span>
+        <em>Preview pages below, then download</em>
+      </div>
+      <div class="preview-gallery">${thumbs
+        .map(
+          (item, index) => `
+          <figure class="preview-gallery-item">
+            <img class="preview-image" src="${item.url}" alt="Page ${index + 1}" />
+            <figcaption>Page ${index + 1}: ${item.name}</figcaption>
+          </figure>`
+        )
+        .join("")}</div>`;
   }
 
   async function ensureTesseract() {
@@ -1459,5 +1547,70 @@
         <div class="docx-pages">${pagesHtml}</div>
         ${notes.length ? `<p class="docx-preview-note">${escapeHtml(notes.join(" "))}</p>` : ""}
       </div>`;
+  }
+
+  async function wordToPdf() {
+    if (!window.mammoth || typeof window.html2pdf !== "function") {
+      throw new Error("Word to PDF libraries are missing. Refresh the page and try again.");
+    }
+
+    const file = files[0];
+    if (!file) throw new Error("Choose a Word .docx file first.");
+    if (!/\.docx$/i.test(file.name || "")) {
+      throw new Error("Please upload a .docx Word file.");
+    }
+
+    setStatus("Reading Word document...");
+    const arrayBuffer = await file.arrayBuffer();
+    const result = await mammoth.convertToHtml({ arrayBuffer });
+    const html = (result.value || "").trim();
+    if (!html) {
+      throw new Error("No readable content was found in this Word file.");
+    }
+
+    const warnings = (result.messages || [])
+      .filter((msg) => msg?.type === "warning")
+      .slice(0, 3)
+      .map((msg) => msg.message);
+
+    const host = document.createElement("div");
+    host.className = "word-pdf-render";
+    host.innerHTML = html;
+    document.body.appendChild(host);
+
+    setStatus("Building PDF preview...");
+    const base = CZImage.baseName(file);
+    try {
+      const pdfBlob = await html2pdf()
+        .set({
+          margin: [12, 12, 12, 12],
+          filename: `${base}.pdf`,
+          image: { type: "jpeg", quality: 0.96 },
+          html2canvas: { scale: 2, useCORS: true, logging: false, backgroundColor: "#ffffff" },
+          jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
+          pagebreak: { mode: ["css", "legacy"] },
+        })
+        .from(host)
+        .outputPdf("blob");
+
+      queueFile(pdfBlob, `${base}.pdf`, "application/pdf");
+      previewHtml = `<div class="word-pdf-preview">
+          <div class="preview-file-card preview-file-card--pdf">
+            <strong>Word → PDF</strong>
+            <span>${escapeHtml(base)}.pdf</span>
+            <em>Preview the document below, then download</em>
+          </div>
+          <article class="word-pdf-page">${html}</article>
+          ${
+            warnings.length
+              ? `<p class="docx-preview-note">${escapeHtml(
+                  "Some formatting may look slightly different in the PDF."
+                )}</p>`
+              : ""
+          }
+        </div>`;
+    } finally {
+      host.remove();
+    }
   }
 })();
