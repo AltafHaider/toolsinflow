@@ -540,8 +540,6 @@
               <input type="color" id="bgCustom" value="#ff6b5e" />
             </label>
           </div>
-          <p class="control-hint">Upload an image, then click Remove Background when you are ready.</p>
-          <button type="button" class="primary" id="bgRemoveBtn" disabled>Remove Background</button>
         </div>`;
     } else if (tool === "split-pdf") {
       controls.innerHTML = `
@@ -598,9 +596,6 @@
       });
       const custom = document.getElementById("bgCustom");
       if (custom) custom.addEventListener("input", () => setBgColor(custom.value));
-      document.getElementById("bgRemoveBtn")?.addEventListener("click", () => {
-        runTool().catch((err) => setStatus(err.message || "Something went wrong.", "error"));
-      });
       syncBgRemoveActions();
     }
 
@@ -679,11 +674,23 @@
   }
 
   function syncBgRemoveActions() {
-    if (tool !== "bg-remove") return;
-    const btn = document.getElementById("bgRemoveBtn");
-    if (!btn) return;
+    if (tool !== "bg-remove" || !actionsBar || !dlBtn) return;
+
+    let btn = document.getElementById("bgRemoveBtn");
+    if (!btn) {
+      btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "primary";
+      btn.id = "bgRemoveBtn";
+      actionsBar.insertBefore(btn, dlBtn);
+      btn.addEventListener("click", () => {
+        runTool().catch((err) => setStatus(err.message || "Something went wrong.", "error"));
+      });
+    }
+
     btn.disabled = !files.length || busy;
-    btn.textContent = cutouts.length ? "Remove Background Again" : "Remove Background";
+    btn.textContent = cutouts.length ? "Remove Again" : "Remove Background";
+    actionsBar.classList.add("actions-bar--bg-remove");
   }
 
   function showOriginalBgPreview() {
