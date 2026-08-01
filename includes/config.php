@@ -42,7 +42,7 @@ return [
         ],
         'study-ppt' => [
             'name' => 'Study PPT Maker',
-            'desc' => 'Enter a topic or paste study notes to create an editable PowerPoint with simple student-friendly slides and 30 unique professional designs.',
+            'desc' => 'Enter a topic or paste study notes to create student-ready PowerPoint slides with definition, uses, properties, pros/cons when available, examples, and a conclusion — plus 30 professional designs.',
             'cat'  => 'study',
         ],
         'compress-image' => [

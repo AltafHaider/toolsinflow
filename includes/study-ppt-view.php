@@ -12,7 +12,7 @@ declare(strict_types=1);
 
         <label class="study-field">
           <span>Or paste your study material</span>
-          <textarea id="studyMaterial" rows="10" placeholder="Paste notes, textbook text, or class material here. We will turn it into simple slides."></textarea>
+          <textarea id="studyMaterial" rows="10" placeholder="Paste notes, textbook text, or class material here. Tip: use headings like What is..., Uses, Properties, Advantages, Disadvantages, Examples, Conclusion."></textarea>
         </label>
 
         <div class="study-options">

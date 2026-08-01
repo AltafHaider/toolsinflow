@@ -116,35 +116,40 @@
   }
 
   function simplifyText(text) {
-    if (!simpleWordsEl?.checked) return cleanText(text);
-    let out = cleanText(text).toLowerCase();
-    Object.keys(SIMPLE_MAP).forEach((word) => {
-      const re = new RegExp(`\\b${word}\\b`, "gi");
-      out = out.replace(re, SIMPLE_MAP[word]);
-    });
-    out = out
-      .replace(/\b(is|are|was|were)\s+being\b/g, "is")
-      .replace(/\bin order to\b/gi, "to")
-      .replace(/\bdue to the fact that\b/gi, "because")
-      .replace(/\ba large number of\b/gi, "many")
-      .replace(/\bat this point in time\b/gi, "now");
-    // Shorten very long sentences.
+    let out = cleanText(text);
+    if (!out) return "";
+    if (simpleWordsEl?.checked) {
+      Object.keys(SIMPLE_MAP).forEach((word) => {
+        const re = new RegExp(`\\b${word}\\b`, "gi");
+        out = out.replace(re, SIMPLE_MAP[word]);
+      });
+      out = out
+        .replace(/\b(is|are|was|were)\s+being\b/gi, "is")
+        .replace(/\bin order to\b/gi, "to")
+        .replace(/\bdue to the fact that\b/gi, "because")
+        .replace(/\ba large number of\b/gi, "many")
+        .replace(/\bat this point in time\b/gi, "now");
+    }
+    // Shorten very long sentences, keeping normal capitalization.
     out = out
       .split(/(?<=[.!?])\s+/)
       .map((s) => {
-        const words = s.trim().split(/\s+/);
-        if (words.length <= 18) return s.trim();
-        return words.slice(0, 16).join(" ") + ".";
+        const trimmed = s.trim();
+        if (!trimmed) return "";
+        const words = trimmed.split(/\s+/);
+        if (words.length <= 22) return capitalizeSentence(trimmed);
+        return capitalizeSentence(words.slice(0, 20).join(" ") + ".");
       })
       .filter(Boolean)
       .join(" ");
-    return capitalizeSentence(out);
+    return out;
   }
 
   function cleanText(text) {
     return String(text || "")
       .replace(/\s+/g, " ")
       .replace(/\[[^\]]*\]/g, "")
+      .replace(/={2,}/g, " ")
       .trim();
   }
 
@@ -161,13 +166,209 @@
       .join(" ");
   }
 
+  function toBullets(lines, max = 5) {
+    const seen = new Set();
+    return lines
+      .map((l) => simplifyText(l))
+      .filter((l) => {
+        if (!l || l.length < 12) return false;
+        const key = l.toLowerCase();
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      })
+      .slice(0, max);
+  }
+
   function chunkBullets(lines, max = 5) {
-    const bullets = lines.map((l) => simplifyText(l)).filter((l) => l.length > 8);
+    const bullets = toBullets(lines, 40);
     const groups = [];
     for (let i = 0; i < bullets.length; i += max) {
       groups.push(bullets.slice(i, i + max));
     }
     return groups;
+  }
+
+  function splitSentences(text) {
+    return cleanText(text)
+      .split(/(?<=[.!?])\s+/)
+      .map((s) => s.trim())
+      .filter((s) => s.length > 18);
+  }
+
+  function looksLikeHeading(line) {
+    const t = cleanText(line);
+    if (!t || t.length > 70) return false;
+    if (/[.!?]$/.test(t)) return false;
+    if (/^(what is|uses?|advantages?|disadvantages?|pros?|cons?|properties|features|types?|examples?|conclusion|summary|importance|applications?|benefits?|limitations?|key points?|introduction|overview)\b/i.test(t)) {
+      return true;
+    }
+    return t.split(/\s+/).length <= 8 && /:$/.test(t);
+  }
+
+  function classifySectionTitle(title) {
+    const t = cleanText(title).toLowerCase();
+    if (/^(see also|references|notes|external links|further reading|bibliography|citations?|research|gallery)$/i.test(t)) return "skip";
+    if (/(histor|timeline|chronolog|\b19\d0s\b|\b20\d0s\b|background)/i.test(t)) return "skip";
+    if (/(disadvantage|limitation|drawback|weakness|problem|cons?\b|risk|challenge)/i.test(t)) return "cons";
+    if (/(advantage|benefit|strength|merit|pros?\b|positive)/i.test(t)) return "pros";
+    if (/(use case|uses?|application|purpose|importance|why |function|role|where)/i.test(t)) return "uses";
+    if (/(propert|characteristic|feature|attribute|component|part|structure|type|kind|classif|element|storage|language)/i.test(t)) return "properties";
+    if (/(example|case stud|in practice|real[- ]?world)/i.test(t)) return "examples";
+    if (/(definition|overview|introduction|about|etymolog|meaning|concept|terminolog)/i.test(t)) return "definition";
+    if (/(conclusion|summary|recap)/i.test(t)) return "conclusion";
+    return "extra";
+  }
+
+  function classifySentence(sentence) {
+    const s = sentence.toLowerCase();
+    if (/(disadvantage|limitation|drawback|problem|risk|challenge|however|although|not always)/i.test(s)) return "cons";
+    if (/(advantage|benefit|helpful|useful because|strength|makes it easy)/i.test(s)) return "pros";
+    if (/(used (for|in|to)|used by|helps|allows|enables|application|purpose|important (for|because)|useful in)/i.test(s)) return "uses";
+    if (/(property|properties|characteristic|feature|type of|types of|consists of|made up of|includes|component|structure)/i.test(s)) return "properties";
+    if (/(for example|such as|e\.g\.|including)/i.test(s)) return "examples";
+    if (/\b(is|are)\s+(a|an|the)\b|\brefers to\b|\bmeans\b|\bdefined as\b|\bknown as\b/i.test(s)) return "definition";
+    return "extra";
+  }
+
+  function parseWikiSections(rawText) {
+    const text = String(rawText || "").replace(/\r/g, "");
+    const parts = text.split(/\n(?=={2,}\s*[^=].*?={2,}\s*$)/m);
+    let lead = "";
+    const sections = [];
+
+    parts.forEach((part, index) => {
+      const trimmed = part.trim();
+      if (!trimmed) return;
+      const headingMatch = trimmed.match(/^={2,}\s*(.*?)\s*={2,}\s*\n?([\s\S]*)$/);
+      if (headingMatch) {
+        const title = cleanText(headingMatch[1]);
+        const body = cleanText(headingMatch[2]);
+        if (title && body) sections.push({ title, body, kind: classifySectionTitle(title) });
+        return;
+      }
+      if (index === 0) lead = cleanText(trimmed);
+      else if (trimmed.length > 40) sections.push({ title: "More details", body: cleanText(trimmed), kind: "extra" });
+    });
+
+    // Fallback: plain paragraphs / note-style headings without wiki markup.
+    if (!sections.length) {
+      const blocks = text.split(/\n{2,}/).map((b) => b.trim()).filter(Boolean);
+      if (blocks.length) {
+        lead = cleanText(blocks[0]);
+        blocks.slice(1).forEach((block) => {
+          const lines = block.split(/\n+/).map((l) => l.trim()).filter(Boolean);
+          if (!lines.length) return;
+          if (looksLikeHeading(lines[0]) && lines.length > 1) {
+            const title = lines[0].replace(/[:.]+$/, "");
+            sections.push({
+              title: titleCase(title),
+              body: cleanText(lines.slice(1).join(" ")),
+              kind: classifySectionTitle(title),
+            });
+          } else {
+            sections.push({ title: "Key ideas", body: cleanText(block), kind: "extra" });
+          }
+        });
+      }
+    }
+
+    return { lead: cleanText(lead), sections };
+  }
+
+  function collectByKind(bucket, kind, limit = 6) {
+    return toBullets(bucket[kind] || [], limit);
+  }
+
+  function buildStudyBuckets(title, text) {
+    const { lead, sections } = parseWikiSections(text);
+    const bucket = {
+      definition: [],
+      uses: [],
+      properties: [],
+      pros: [],
+      cons: [],
+      examples: [],
+      conclusion: [],
+      extra: [],
+    };
+
+    splitSentences(lead).slice(0, 6).forEach((s) => {
+      const kind = classifySentence(s);
+      bucket[kind === "extra" ? "definition" : kind].push(s);
+    });
+
+    sections.forEach((section) => {
+      if (section.kind === "skip") return;
+      const sentences = splitSentences(section.body);
+      if (!sentences.length) return;
+      if (["definition", "uses", "properties", "pros", "cons", "examples", "conclusion"].includes(section.kind)) {
+        bucket[section.kind].push(...sentences.slice(0, 6));
+      } else {
+        sentences.slice(0, 4).forEach((s) => {
+          const kind = classifySentence(s);
+          bucket[kind].push(s);
+        });
+      }
+    });
+
+    // If a category is empty, try to infer from leftover sentences.
+    const all = [
+      ...splitSentences(lead),
+      ...sections.flatMap((s) => splitSentences(s.body)),
+    ];
+    all.forEach((s) => {
+      const kind = classifySentence(s);
+      if ((bucket[kind] || []).length < 4) bucket[kind].push(s);
+    });
+
+    if (!bucket.definition.length) {
+      bucket.definition.push(`${title} is an important topic students should understand clearly.`);
+      if (all[0]) bucket.definition.push(all[0]);
+    }
+    if (!bucket.uses.length) {
+      const useLike = all.filter((s) => /use|help|important|need|allow|purpose|learn/i.test(s));
+      bucket.uses.push(...(useLike.length ? useLike.slice(0, 4) : [
+        `People study ${title} to understand how it works in real life.`,
+        `Knowing ${title} helps with school work and practical problems.`,
+      ]));
+    }
+    if (!bucket.properties.length) {
+      const propLike = all.filter((s) => /type|part|feature|include|consist|form|kind|main/i.test(s));
+      if (propLike.length) bucket.properties.push(...propLike.slice(0, 4));
+    }
+    if (!bucket.pros.length) {
+      const proLike = all.filter((s) => /advantage|benefit|easy|fast|better|useful|efficient/i.test(s));
+      if (proLike.length) bucket.pros.push(...proLike.slice(0, 4));
+    }
+    if (!bucket.cons.length) {
+      const conLike = all.filter((s) => /disadvantage|limit|problem|hard|risk|cost|challenge|however/i.test(s));
+      if (conLike.length) bucket.cons.push(...conLike.slice(0, 4));
+    }
+    if (!bucket.examples.length) {
+      const exLike = all.filter((s) => /example|such as|for instance|including|e\.g\./i.test(s));
+      if (exLike.length) bucket.examples.push(...exLike.slice(0, 4));
+    }
+
+    return bucket;
+  }
+
+  function pushContentSlide(slides, title, bullets, maxSlides) {
+    const clean = toBullets(bullets, 5);
+    if (!clean.length || slides.length >= maxSlides - 1) return false;
+    slides.push({ type: "content", title, bullets: clean });
+    return true;
+  }
+
+  function buildConclusionBullets(title, bucket) {
+    const points = [];
+    const def = collectByKind(bucket, "definition", 1)[0];
+    const use = collectByKind(bucket, "uses", 1)[0];
+    if (def) points.push(def);
+    if (use) points.push(use);
+    points.push(`${title} has clear ideas you can revise with short notes and examples.`);
+    points.push("Review the definition, uses, and key points before a test.");
+    return toBullets(points, 4);
   }
 
   function renderTemplates() {
@@ -192,18 +393,19 @@
     if (!searchRes.ok) throw new Error("Could not look up this topic right now.");
     const searchData = await searchRes.json();
     const pageTitle = searchData?.[1]?.[0] || topic.trim();
-    const extractUrl = `https://en.wikipedia.org/w/api.php?action=query&prop=extracts&explaintext=1&exsectionformat=plain&titles=${encodeURIComponent(pageTitle)}&format=json&origin=*`;
+    const extractUrl = `https://en.wikipedia.org/w/api.php?action=query&prop=extracts&explaintext=1&exsectionformat=wiki&redirects=1&titles=${encodeURIComponent(pageTitle)}&format=json&origin=*`;
     const extractRes = await fetch(extractUrl);
     if (!extractRes.ok) throw new Error("Could not load study content for this topic.");
     const extractData = await extractRes.json();
     const pages = extractData?.query?.pages || {};
     const page = Object.values(pages)[0];
-    const extract = cleanText(page?.extract || "");
+    // Keep section markers for structured parsing; clean later per sentence.
+    const extract = String(page?.extract || "").trim();
     if (!extract || page?.missing !== undefined) {
       return buildFallbackTopic(topic);
     }
     return {
-      title: titleCase(pageTitle),
+      title: titleCase(page?.title || pageTitle),
       source: "topic",
       text: extract,
     };
@@ -215,124 +417,132 @@
       title: t,
       source: "topic",
       text: [
+        `== What is ${t}? ==`,
         `${t} is an important school topic.`,
-        `Students should learn what ${t} means in simple words.`,
-        `First, learn the basic idea of ${t}.`,
-        `Next, learn the main parts or steps of ${t}.`,
-        `Then, look at real-life examples of ${t}.`,
-        `Also learn why ${t} is useful.`,
-        `Finally, review key words and practice questions about ${t}.`,
-      ].join(" "),
+        `In simple words, ${t} means the main idea students need to understand for class and exams.`,
+        `== Uses ==`,
+        `Students learn ${t} to solve problems and explain ideas clearly.`,
+        `${t} is useful in real life, homework, and tests.`,
+        `Teachers often ask how ${t} works and why it matters.`,
+        `== Properties and key points ==`,
+        `${t} has main parts or steps that should be learned one by one.`,
+        `Key terms connected to ${t} help you remember the topic faster.`,
+        `Examples make ${t} easier to understand.`,
+        `== Advantages ==`,
+        `Learning ${t} builds strong basics for harder lessons later.`,
+        `Clear notes on ${t} save time during revision.`,
+        `== Disadvantages or challenges ==`,
+        `${t} can feel hard if you only memorize words without examples.`,
+        `Skipping practice makes ${t} easy to forget before a test.`,
+        `== Examples ==`,
+        `Try one classroom example and one real-life example of ${t}.`,
+        `Write your own short example to check that you understand ${t}.`,
+        `== Conclusion ==`,
+        `In conclusion, ${t} is best learned through definition, uses, key points, and practice.`,
+      ].join("\n"),
     };
   }
 
   function buildSlidesFromText(title, text, maxSlides) {
-    const simple = simplifyText(text);
-    const sentences = simple
-      .split(/(?<=[.!?])\s+/)
-      .map((s) => s.trim())
-      .filter((s) => s.length > 20);
-
+    const bucket = buildStudyBuckets(title, text);
     const slides = [];
+
     slides.push({
       type: "title",
       title,
-      body: "A simple study presentation made for easy understanding.",
+      body: "A clear study presentation for students: definition, uses, key points, and conclusion.",
     });
 
-    if (sentences[0]) {
-      slides.push({
-        type: "content",
-        title: "What is this about?",
-        bullets: [sentences[0], sentences[1] || "We will learn the main ideas in easy words."].filter(Boolean),
-      });
+    pushContentSlide(
+      slides,
+      `What is ${title}?`,
+      collectByKind(bucket, "definition", 4),
+      maxSlides
+    );
+
+    pushContentSlide(
+      slides,
+      `Uses of ${title}`,
+      collectByKind(bucket, "uses", 4),
+      maxSlides
+    );
+
+    const properties = collectByKind(bucket, "properties", 5);
+    if (properties.length) {
+      pushContentSlide(slides, `Properties & key features`, properties, maxSlides);
     }
 
-    const remaining = sentences.slice(2);
-    const groups = chunkBullets(remaining, 4);
-    groups.forEach((group, index) => {
+    const pros = collectByKind(bucket, "pros", 4);
+    const cons = collectByKind(bucket, "cons", 4);
+    if (pros.length && cons.length && slides.length < maxSlides - 2) {
+      // Keep pros/cons readable: separate slides when both exist.
+      pushContentSlide(slides, `Advantages of ${title}`, pros, maxSlides);
+      pushContentSlide(slides, `Disadvantages / limitations`, cons, maxSlides);
+    } else if (pros.length) {
+      pushContentSlide(slides, `Advantages of ${title}`, pros, maxSlides);
+    } else if (cons.length) {
+      pushContentSlide(slides, `Limitations to remember`, cons, maxSlides);
+    }
+
+    const examples = collectByKind(bucket, "examples", 4);
+    if (examples.length) {
+      pushContentSlide(slides, "Examples", examples, maxSlides);
+    }
+
+    // Fill remaining space with useful extras before conclusion (max 1–2 slides).
+    const extra = collectByKind(bucket, "extra", 8);
+    chunkBullets(extra, 4).slice(0, 2).forEach((group, index) => {
       if (slides.length >= maxSlides - 1) return;
-      slides.push({
-        type: "content",
-        title: index === 0 ? "Main points" : `More key points ${index + 1}`,
-        bullets: group,
-      });
+      pushContentSlide(
+        slides,
+        index === 0 ? "More important points" : "Extra revision points",
+        group,
+        maxSlides
+      );
     });
 
-    while (slides.length < Math.min(5, maxSlides - 1) && remaining.length) {
-      // ensure a minimum useful deck
-      break;
-    }
-
-    if (slides.length < maxSlides) {
-      const tipPool = remaining.slice(-6);
-      if (tipPool.length) {
-        slides.push({
-          type: "content",
-          title: "Remember these",
-          bullets: tipPool.slice(0, 4).map((s) => simplifyText(s)),
-        });
-      }
-    }
-
+    const conclusion = collectByKind(bucket, "conclusion", 3);
+    // Always keep the last slide for a student-friendly conclusion.
+    while (slides.length >= maxSlides) slides.pop();
     slides.push({
       type: "end",
-      title: "Quick review",
-      bullets: [
-        `Topic: ${title}`,
-        "Read each slide slowly.",
-        "Say the ideas in your own words.",
-        "Ask your teacher about anything unclear.",
-      ],
+      title: "Conclusion",
+      bullets: conclusion.length
+        ? toBullets([...conclusion, `Revise ${title} using the definition, uses, and key points.`], 4)
+        : buildConclusionBullets(title, bucket),
     });
 
     return slides.slice(0, maxSlides);
   }
 
   function buildSlidesFromMaterial(title, material, maxSlides) {
-    const blocks = String(material || "")
-      .replace(/\r/g, "")
-      .split(/\n{2,}/)
-      .map((b) => b.trim())
-      .filter(Boolean);
+    const topicTitle = title || "My Study Presentation";
+    const normalized = String(material || "").replace(/\r/g, "").trim();
 
-    const slides = [{
-      type: "title",
-      title: title || "My Study Presentation",
-      body: "Made from your study material in simple words.",
-    }];
+    // Prefer structured student outline when headings exist; otherwise classify sentences.
+    const hasHeadings = /(?:^|\n)\s*(?:#{1,3}\s+|[A-Z][A-Za-z0-9 /&-]{2,40}:\s*$|={2,}.+={2,}|what is|uses?|pros?|cons?|advantages?|disadvantages?|properties|features|examples?|conclusion)/i.test(normalized);
+    if (!hasHeadings) {
+      return buildSlidesFromText(topicTitle, normalized, maxSlides);
+    }
 
-    blocks.forEach((block) => {
-      if (slides.length >= maxSlides - 1) return;
-      const lines = block.split(/\n+/).map((l) => l.replace(/^[-*•]\s*/, "").trim()).filter(Boolean);
-      if (!lines.length) return;
-      const heading = lines[0].length < 70 ? titleCase(lines[0].replace(/[:.]+$/, "")) : "Key idea";
-      const points = lines
-        .slice(heading === titleCase(lines[0].replace(/[:.]+$/, "")) ? 1 : 0)
-        .map((l) => simplifyText(l))
-        .filter(Boolean);
-      const bullets = points.length ? points : [simplifyText(block)];
-      chunkBullets(bullets, 5).forEach((group, idx) => {
-        if (slides.length >= maxSlides - 1) return;
-        slides.push({
-          type: "content",
-          title: idx === 0 ? heading : `${heading} (cont.)`,
-          bullets: group,
-        });
-      });
-    });
+    // Convert common note headings into wiki-like sections for the same pipeline.
+    const asWiki = normalized
+      .split(/\n+/)
+      .map((line) => {
+        const t = line.trim();
+        if (!t) return "";
+        if (/^={2,}.+={2,}$/.test(t) || /^#{1,3}\s+/.test(t)) {
+          const heading = t.replace(/^#{1,3}\s+/, "").replace(/={2,}/g, "").trim();
+          return `== ${heading} ==`;
+        }
+        if (looksLikeHeading(t)) {
+          return `== ${t.replace(/[:.]+$/, "")} ==`;
+        }
+        return t.replace(/^[-*•]\s*/, "");
+      })
+      .join("\n");
 
-    slides.push({
-      type: "end",
-      title: "Study tip",
-      bullets: [
-        "Review these slides once more.",
-        "Write 3 questions from the topic.",
-        "Explain one idea to a friend.",
-      ],
-    });
-
-    return slides.slice(0, maxSlides);
+    return buildSlidesFromText(topicTitle, asWiki, maxSlides);
   }
 
   function textOnFill(fillHex, template) {
@@ -690,7 +900,7 @@
 
     generateBtn.disabled = true;
     downloadBtn.disabled = true;
-    setStatus(material ? "Building slides from your notes..." : "Looking up the topic and writing simple slides...");
+    setStatus(material ? "Building student study slides from your notes..." : "Looking up the topic and building definition, uses, key points, and conclusion...");
 
     try {
       let title = topic || "My Study Presentation";
