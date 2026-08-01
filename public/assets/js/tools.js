@@ -366,6 +366,14 @@
     manual = { source: null, mask: null, display: null, painting: false, scale: 1 };
     clearPreview();
     renderFiles();
+
+    if (tool === "bg-remove") {
+      showOriginalBgPreview();
+      setStatus(`${files.length} image(s) ready. Click Remove Background.`);
+      syncBgRemoveActions();
+      return;
+    }
+
     setStatus(
       tool === "pdf-to-word"
         ? "Reading PDF..."
@@ -373,7 +381,7 @@
         ? "Reading Word document..."
         : `${files.length} image(s). Generating preview...`
     );
-    scheduleAutoRun(tool === "bg-remove" || tool === "blur-faces" ? 150 : 250);
+    scheduleAutoRun(tool === "blur-faces" ? 150 : 250);
   }
 
   function escapeHtml(s) {
@@ -409,12 +417,17 @@
           } else if (tool === "split-pdf") {
             setStatus("Updating split preview...");
             scheduleAutoRun(200);
+          } else if (tool === "bg-remove") {
+            showOriginalBgPreview();
+            setStatus(`${files.length} image(s) ready. Click Remove Background.`);
+            syncBgRemoveActions();
           } else {
             setStatus(`${files.length} image(s). Updating preview...`);
             scheduleAutoRun(200);
           }
         } else {
           setStatus("");
+          syncBgRemoveActions();
         }
       });
     });
@@ -527,6 +540,8 @@
               <input type="color" id="bgCustom" value="#ff6b5e" />
             </label>
           </div>
+          <p class="control-hint">Upload an image, then click Remove Background when you are ready.</p>
+          <button type="button" class="primary" id="bgRemoveBtn" disabled>Remove Background</button>
         </div>`;
     } else if (tool === "split-pdf") {
       controls.innerHTML = `
@@ -583,6 +598,10 @@
       });
       const custom = document.getElementById("bgCustom");
       if (custom) custom.addEventListener("input", () => setBgColor(custom.value));
+      document.getElementById("bgRemoveBtn")?.addEventListener("click", () => {
+        runTool().catch((err) => setStatus(err.message || "Something went wrong.", "error"));
+      });
+      syncBgRemoveActions();
     }
 
     if (tool === "blur-faces") {
@@ -659,6 +678,37 @@
     }
   }
 
+  function syncBgRemoveActions() {
+    if (tool !== "bg-remove") return;
+    const btn = document.getElementById("bgRemoveBtn");
+    if (!btn) return;
+    btn.disabled = !files.length || busy;
+    btn.textContent = cutouts.length ? "Remove Background Again" : "Remove Background";
+  }
+
+  function showOriginalBgPreview() {
+    if (!files.length) {
+      clearPreview();
+      return;
+    }
+    pendingFiles = [];
+    const cards = files
+      .map((file, index) => {
+        const url = URL.createObjectURL(file);
+        return `<figure class="preview-gallery-item">
+          <img class="preview-image" src="${url}" alt="Original ${index + 1}" />
+          <figcaption>Original ${index + 1}</figcaption>
+        </figure>`;
+      })
+      .join("");
+    previewHtml =
+      files.length === 1
+        ? `<img class="preview-image" src="${URL.createObjectURL(files[0])}" alt="Original image" />`
+        : `<div class="preview-gallery">${cards}</div>`;
+    showPreviewPanel();
+    setDownloadEnabled(false);
+  }
+
   buildControls();
 
   async function runTool() {
@@ -674,6 +724,7 @@
 
     const token = ++runToken;
     busy = true;
+    syncBgRemoveActions();
     clearPreview();
     setStatus(tool === "bg-remove" ? "Removing background..." : tool === "compress-image" ? "Compressing image..." : "Working...");
     let doneMessage = "Preview ready. Download if it looks good.";
@@ -749,13 +800,20 @@
         previewHtml = `<div class="preview-svg">${svgText}</div>`;
       }
       showPreviewPanel();
-      setStatus(doneMessage || "Preview ready. Download if it looks good.", "ok");
+      setStatus(
+        tool === "bg-remove"
+          ? "Background removed. Download when ready."
+          : doneMessage || "Preview ready. Download if it looks good.",
+        "ok"
+      );
     } finally {
       if (token === runToken) {
         busy = false;
+        syncBgRemoveActions();
         if (rerunAfterBusy) {
           rerunAfterBusy = false;
-          scheduleAutoRun(50);
+          // Background remover is manual-only — never auto-restart it.
+          if (tool !== "bg-remove") scheduleAutoRun(50);
         }
       }
     }

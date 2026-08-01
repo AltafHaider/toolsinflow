@@ -2329,6 +2329,18 @@ button, .primary {
   width: 100%;
 }
 
+.bg-picker .primary {
+  width: 100%;
+  justify-content: center;
+}
+
+.bg-picker .control-hint {
+  margin: 0;
+  width: 100%;
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+
 .bg-picker-label {
   font-weight: 700;
   font-size: 0.9rem;
