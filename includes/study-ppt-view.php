@@ -32,8 +32,8 @@ declare(strict_types=1);
         </div>
 
         <div class="study-templates" id="studyTemplates" aria-label="Presentation templates">
-          <p class="study-templates-label">Choose from 30 professional designs</p>
-          <div class="study-template-grid" id="studyTemplateGrid"></div>
+          <p class="study-templates-label">Choose a design <span class="study-templates-hint">Top 8 shown — open more below</span></p>
+          <div id="studyTemplateGrid"></div>
         </div>
 
         <div class="study-actions">

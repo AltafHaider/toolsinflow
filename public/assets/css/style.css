@@ -3713,12 +3713,78 @@ html.pdf-plain-cursor textarea {
   margin: 0 0 0.65rem;
   font-weight: 800;
   letter-spacing: -0.02em;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.35rem 0.65rem;
+}
+
+.study-templates-hint {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--muted);
+  letter-spacing: 0;
 }
 
 .study-template-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
   gap: 0.55rem;
+}
+
+.study-template-more {
+  margin-top: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface-2);
+  overflow: hidden;
+}
+
+.study-template-more > summary {
+  list-style: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.7rem 0.9rem;
+  cursor: pointer;
+  font-size: 0.86rem;
+  font-weight: 750;
+  color: var(--ink);
+  user-select: none;
+}
+
+.study-template-more > summary::-webkit-details-marker {
+  display: none;
+}
+
+.study-template-more > summary::after {
+  content: "";
+  width: 0.45rem;
+  height: 0.45rem;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(45deg);
+  opacity: 0.7;
+  transition: transform 0.15s ease;
+  flex: 0 0 auto;
+}
+
+.study-template-more[open] > summary::after {
+  transform: rotate(-135deg);
+  margin-top: 0.2rem;
+}
+
+.study-template-more-meta {
+  margin-left: auto;
+  margin-right: 0.35rem;
+  font-size: 0.75rem;
+  font-weight: 650;
+  color: var(--muted);
+}
+
+.study-template-grid--more {
+  padding: 0 0.75rem 0.75rem;
 }
 
 .study-template {

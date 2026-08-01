@@ -98,7 +98,9 @@
     economy: "how money and work move",
   };
 
+  const FEATURED_TEMPLATE_COUNT = 8;
   let selectedTemplate = TEMPLATES[0].id;
+  let templatesExpanded = false;
   let deck = null;
 
   function setStatus(message, type = "") {
@@ -371,15 +373,50 @@
     return toBullets(points, 4);
   }
 
-  function renderTemplates() {
-    templateGrid.innerHTML = TEMPLATES.map((tpl) => `
+  function templateButtonHtml(tpl) {
+    return `
       <button type="button" class="study-template${tpl.id === selectedTemplate ? " is-active" : ""}" data-template="${tpl.id}" aria-pressed="${tpl.id === selectedTemplate}">
         <span class="study-template-swatch study-swatch--${tpl.layout}" style="--slide-accent:#${tpl.accent};--slide-card:#${tpl.card};background:linear-gradient(135deg,#${tpl.bg},#${tpl.card});color:#${tpl.text}">
           <strong>Aa</strong>
         </span>
         <span>${escapeHtml(tpl.name)}</span>
       </button>
-    `).join("");
+    `;
+  }
+
+  function isFeaturedTemplate(id) {
+    return TEMPLATES.slice(0, FEATURED_TEMPLATE_COUNT).some((tpl) => tpl.id === id);
+  }
+
+  function renderTemplates() {
+    const featured = TEMPLATES.slice(0, FEATURED_TEMPLATE_COUNT);
+    const more = TEMPLATES.slice(FEATURED_TEMPLATE_COUNT);
+    const selectedInMore = !isFeaturedTemplate(selectedTemplate);
+    if (selectedInMore) templatesExpanded = true;
+
+    templateGrid.innerHTML = `
+      <div class="study-template-grid">${featured.map(templateButtonHtml).join("")}</div>
+      ${more.length ? `
+        <details class="study-template-more"${templatesExpanded ? " open" : ""}>
+          <summary>
+            <span>${templatesExpanded ? "Hide extra designs" : `More designs (${more.length})`}</span>
+            <span class="study-template-more-meta">${more.length} more styles</span>
+          </summary>
+          <div class="study-template-grid study-template-grid--more">${more.map(templateButtonHtml).join("")}</div>
+        </details>
+      ` : ""}
+    `;
+
+    const details = templateGrid.querySelector(".study-template-more");
+    if (details) {
+      details.addEventListener("toggle", () => {
+        templatesExpanded = details.open;
+        const label = details.querySelector("summary span");
+        if (label) {
+          label.textContent = details.open ? "Hide extra designs" : `More designs (${more.length})`;
+        }
+      });
+    }
   }
 
   function getTemplate(id = selectedTemplate) {
