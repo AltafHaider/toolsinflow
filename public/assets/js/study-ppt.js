@@ -397,6 +397,45 @@
     "Financial Accounting",
   ];
 
+  // Study topic label → Wikipedia search queries that actually have rich articles.
+  const TOPIC_WIKI_QUERIES = {
+    "programming fundamentals": ["Computer programming", "Programming language", "Software development"],
+    "computer fundamentals": ["Computer", "Computer hardware", "Personal computer"],
+    "computer science": ["Computer science", "Computing"],
+    "data structures": ["Data structure", "Array (data structure)", "Linked list"],
+    "database management system": ["Database", "Database management system", "SQL"],
+    "operating system": ["Operating system", "Kernel (operating system)"],
+    "object-oriented programming": ["Object-oriented programming", "Class (computer programming)"],
+    "software engineering": ["Software engineering", "Software development"],
+    "web development": ["Web development", "World Wide Web", "HTML"],
+    "cybersecurity": ["Computer security", "Cybersecurity"],
+    "artificial intelligence": ["Artificial intelligence", "Machine learning"],
+    "machine learning": ["Machine learning", "Artificial intelligence"],
+    "digital marketing": ["Digital marketing", "Search engine optimization", "Social media marketing"],
+    "photosynthesis": ["Photosynthesis"],
+    "climate change": ["Climate change", "Global warming"],
+    "world war ii": ["World War II"],
+    "human anatomy": ["Human body", "Anatomy"],
+    "financial accounting": ["Financial accounting", "Accounting"],
+  };
+
+  function wikiQueriesForTopic(topic) {
+    const key = cleanText(topic).toLowerCase();
+    if (TOPIC_WIKI_QUERIES[key]) return [...TOPIC_WIKI_QUERIES[key]];
+
+    const queries = [topic];
+    if (/programming fundamental/i.test(topic)) {
+      queries.unshift("Computer programming", "Programming language");
+    } else if (/computer fundamental/i.test(topic)) {
+      queries.unshift("Computer", "Computer hardware");
+    } else if (/fundamentals?/i.test(topic)) {
+      const base = cleanText(topic.replace(/fundamentals?/ig, ""));
+      if (base) queries.unshift(base);
+    }
+    // Deduplicate while preserving order.
+    return [...new Set(queries.map((q) => cleanText(q)).filter(Boolean))];
+  }
+
   function editDistance(a, b) {
     const s = String(a || "");
     const t = String(b || "");
@@ -764,104 +803,100 @@
             match: seed.match,
             useLead: seed.role === "intro",
           });
-        } else if (seed.role !== "intro") {
-          outline.push({
-            role: seed.role,
-            title: seed.title,
-            sourceIndexes: [],
-            match: seed.match,
-            useLead: false,
-            soft: true,
-          });
         }
+        // Do not add empty "soft" slides — they produce useless circular text.
       });
     }
 
-    // Keep intro first; trim soft placeholders if we are over budget.
+    // Keep intro first; drop extras over budget (prefer real wiki-backed items).
     const intro = outline[0];
-    let rest = outline.slice(1);
-    rest = rest.filter((item, idx) => !(item.soft && idx > 4 && rest.length > maxContentSlides));
-    while (rest.length > maxContentSlides - 1) {
-      const softIdx = rest.map((item, i) => (item.soft ? i : -1)).filter((i) => i >= 0).pop();
-      if (softIdx == null) {
-        rest.pop();
-      } else {
-        rest.splice(softIdx, 1);
-      }
-    }
-
+    const rest = outline.slice(1);
+    while (rest.length > maxContentSlides - 1) rest.pop();
     return [intro, ...rest].slice(0, maxContentSlides);
+  }
+
+  function isLowQualitySentence(sentence, analysis) {
+    const s = cleanText(sentence).toLowerCase();
+    const topic = cleanText(analysis.topic).toLowerCase();
+    const short = cleanText(analysis.short).toLowerCase();
+    if (s.length < 28) return true;
+    if (/helps students understand/.test(s)) return true;
+    if (/focus on the main ideas under/.test(s)) return true;
+    if (/connect them to/.test(s)) return true;
+    if (/important topic for students/.test(s)) return true;
+    if (/clear study order/.test(s)) return true;
+    if (/best revised from introduction/.test(s)) return true;
+    if (topic && s === `${topic} is an important topic for study and real-life understanding.`) return true;
+    if (short && new RegExp(`^${short.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")} is used in school work`, "i").test(s)) return true;
+    return false;
   }
 
   function gatherBulletsForItem(item, analysis, lead, sections, usedSentences) {
     const pool = [];
     if (item.useLead || item.role === "intro") {
-      pool.push(...splitSentences(lead).slice(0, 5));
+      pool.push(...splitSentences(lead).slice(0, 6));
     }
     item.sourceIndexes.forEach((index) => {
       const section = sections[index];
-      if (section) pool.push(...splitSentences(section.body).slice(0, 8));
+      if (section) pool.push(...splitSentences(section.body).slice(0, 10));
     });
-    if (pool.length < 3 && item.match) {
+    if (pool.length < 4 && item.match) {
       sections.forEach((section) => {
         if (isNoiseSection(section.title)) return;
-        if (item.match.test(section.title) || item.match.test(section.body.slice(0, 320))) {
-          pool.push(...splitSentences(section.body).slice(0, 4));
+        if (item.match.test(section.title) || item.match.test(section.body.slice(0, 400))) {
+          pool.push(...splitSentences(section.body).slice(0, 5));
         }
       });
     }
-    if (pool.length < 2) {
-      const keywords = `${item.title} ${analysis.short}`.toLowerCase().split(/[^a-z0-9]+/).filter((w) => w.length > 3);
+    if (pool.length < 3) {
+      const keywords = `${item.title} ${analysis.short} ${analysis.topic}`
+        .toLowerCase()
+        .split(/[^a-z0-9]+/)
+        .filter((w) => w.length > 3 && !["what", "this", "that", "with", "from", "into", "about"].includes(w));
       const all = [...splitSentences(lead), ...sections.flatMap((s) => splitSentences(s.body))];
       all.forEach((sentence) => {
         const lower = sentence.toLowerCase();
-        if (keywords.some((k) => lower.includes(k))) pool.push(sentence);
+        const hits = keywords.filter((k) => lower.includes(k)).length;
+        if (hits >= 1) pool.push(sentence);
       });
     }
 
     const unique = [];
     pool.forEach((sentence) => {
+      if (isLowQualitySentence(sentence, analysis)) return;
       const key = sentence.toLowerCase();
       if (usedSentences.has(key)) return;
       usedSentences.add(key);
       unique.push(sentence);
     });
 
-    if (unique.length) return toBullets(unique, 5);
-
-    // Topic-aware fallback only when source text is thin for that heading.
-    const s = analysis.short;
-    const fallbacks = {
-      intro: [
-        `${analysis.topic} is an important topic for study and real-life understanding.`,
-        `This presentation explains ${s} in a clear order for students.`,
-      ],
-      definition: [`${analysis.topic} means the main idea and terms students should learn first.`],
-      process: [`${s} happens through clear steps that build on each other.`],
-      equation: [`The formula or equation linked to ${s} helps explain the process in short form.`],
-      factors: [`Several conditions can speed up, slow down, or change ${s}.`],
-      types: [`${s} can be grouped into useful types or categories for easier learning.`],
-      applications: [`${s} is used in school work, industry, and everyday situations.`],
-      benefits: [`Learning ${s} helps students solve problems and explain ideas with confidence.`],
-      challenges: [`${s} also has limits, risks, or hard parts that students should remember.`],
-      future: [`New tools and research continue to shape the future of ${s}.`],
-      examples: [`Real examples make ${s} easier to remember in exams and projects.`],
-      conclusion: [`In short, ${s} is best revised from introduction to key ideas and final takeaways.`],
-    };
-    return toBullets(fallbacks[item.role] || [
-      `${item.title} is an important part of understanding ${s}.`,
-      `Focus on the main points under “${item.title}” while revising ${analysis.topic}.`,
-    ], 4);
+    // Only real source sentences — never invent circular filler text.
+    return toBullets(unique, 5);
   }
 
   function buildConclusionBullets(analysis, lead, sections, usedSentences) {
     const points = [];
-    const leadPoints = splitSentences(lead).filter((s) => !usedSentences.has(s.toLowerCase())).slice(0, 1);
-    points.push(...leadPoints);
-    const closing = sections.find((section) => /conclusion|summary|legacy|importance|future/i.test(section.title));
-    if (closing) points.push(...splitSentences(closing.body).slice(0, 2));
-    points.push(`${analysis.topic} is best understood by reviewing each section in order.`);
-    points.push(`Revise the key headings of this deck and explain ${analysis.short} in your own words.`);
+    const unusedLead = splitSentences(lead).filter((s) => !usedSentences.has(s.toLowerCase()) && !isLowQualitySentence(s, analysis));
+    points.push(...unusedLead.slice(0, 2));
+    const closing = sections.find((section) => /conclusion|summary|legacy|importance|application|use/i.test(section.title));
+    if (closing) {
+      points.push(
+        ...splitSentences(closing.body)
+          .filter((s) => !usedSentences.has(s.toLowerCase()) && !isLowQualitySentence(s, analysis))
+          .slice(0, 2)
+      );
+    }
+    if (!points.length) {
+      const extras = sections
+        .flatMap((s) => splitSentences(s.body))
+        .filter((s) => !usedSentences.has(s.toLowerCase()) && !isLowQualitySentence(s, analysis))
+        .slice(0, 3);
+      points.push(...extras);
+    }
+    if (!points.length) {
+      points.push(`${analysis.topic} covers core ideas students should revise section by section.`);
+      points.push(`Explain ${analysis.short} in your own words using the headings in this presentation.`);
+    }
     return toBullets(points, 4);
   }
 
@@ -1062,8 +1097,9 @@
     return resolved;
   }
 
-  async function fetchWikiExtractBySearch(lookup) {
-    const extractUrl = `https://en.wikipedia.org/w/api.php?action=query&generator=search&gsrsearch=${encodeURIComponent(lookup)}&gsrlimit=5&prop=extracts&explaintext=1&exsectionformat=wiki&redirects=1&format=json&origin=*`;
+  async function fetchWikiExtractBySearch(lookup, options = {}) {
+    const relatedOk = Boolean(options.relatedOk);
+    const extractUrl = `https://en.wikipedia.org/w/api.php?action=query&generator=search&gsrsearch=${encodeURIComponent(lookup)}&gsrlimit=8&prop=extracts&explaintext=1&exsectionformat=wiki&redirects=1&format=json&origin=*`;
     const extractRes = await fetch(extractUrl);
     if (!extractRes.ok) throw new Error("Could not load study content for this topic.");
     const extractData = await extractRes.json();
@@ -1073,13 +1109,19 @@
     const ranked = pages
       .map((page) => {
         const title = page?.title || "";
-        let score = hasWordOverlap(lookup, title) ? 20 : -50;
-        if (topicsLookSame(lookup, title)) score += 50;
-        if (/disambiguation/i.test(title)) score -= 40;
-        score -= Math.max(0, title.split(/\s+/).length - 5);
-        return { page, title, score, extract: String(page?.extract || "").trim() };
+        const extract = String(page?.extract || "").trim();
+        let score = 0;
+        if (topicsLookSame(lookup, title)) score += 80;
+        if (hasWordOverlap(lookup, title)) score += 35;
+        else if (relatedOk) score += 5;
+        else score -= 40;
+        if (/disambiguation/i.test(title)) score -= 60;
+        if (extract.length > 800) score += 15;
+        if (extract.length > 2000) score += 10;
+        score -= Math.max(0, title.split(/\s+/).length - 6);
+        return { page, title, score, extract };
       })
-      .filter((row) => row.extract && row.score >= 10)
+      .filter((row) => row.extract && row.extract.length > 180 && row.score >= 20)
       .sort((a, b) => b.score - a.score);
 
     return ranked[0] || null;
@@ -1087,59 +1129,119 @@
 
   async function fetchTopicContent(topic) {
     const resolved = await resolveCanonicalTopic(topic);
-    const lookup = resolved.corrected || cleanText(topic);
-    let match = null;
+    const displayTitle = polishStudyTopic(resolved.corrected || cleanText(topic));
+    const queries = wikiQueriesForTopic(displayTitle);
+    const extracts = [];
+    const seenTitles = new Set();
 
-    try {
-      match = await fetchWikiExtractBySearch(lookup);
-      if (!match && !topicsLookSame(lookup, resolved.original)) {
-        match = await fetchWikiExtractBySearch(resolved.original);
-        // If original typo only finds unrelated pages, ignore them.
-        if (match && !hasWordOverlap(lookup, match.title)) match = null;
+    for (const query of queries) {
+      try {
+        const relatedOk = !topicsLookSame(query, displayTitle);
+        const match = await fetchWikiExtractBySearch(query, { relatedOk });
+        if (!match?.extract) continue;
+        const key = match.title.toLowerCase();
+        if (seenTitles.has(key)) continue;
+        seenTitles.add(key);
+        extracts.push(match);
+        if (extracts.length >= 2) break;
+      } catch (error) {
+        // Try next query.
       }
-    } catch (error) {
-      match = null;
     }
 
-    const known = expansionFor(resolved.original) || expansionFor(lookup);
-    const pageTitle = polishStudyTopic(
-      prettyStudyTitle(match?.title || lookup, known || resolved.corrected || lookup)
-    );
-
-    if (!match?.extract) {
-      const fallback = buildFallbackTopic(pageTitle);
+    if (!extracts.length) {
+      const fallback = buildFallbackTopic(displayTitle);
       return {
         ...fallback,
-        title: pageTitle,
+        title: displayTitle,
         originalTopic: resolved.original,
-        corrected: !topicsLookSame(resolved.original, pageTitle),
+        corrected: !topicsLookSame(resolved.original, displayTitle),
       };
     }
 
+    // Keep the student's topic as the presentation title; use Wikipedia text for content.
+    const mergedText = extracts.map((item, index) => {
+      if (index === 0) return item.extract;
+      return `\n\n== More about ${item.title} ==\n${item.extract}`;
+    }).join("\n");
+
     return {
-      title: pageTitle,
+      title: displayTitle,
       source: "topic",
-      text: match.extract,
+      text: mergedText,
+      sourceArticles: extracts.map((item) => item.title),
       originalTopic: resolved.original,
-      corrected: !topicsLookSame(resolved.original, pageTitle),
+      corrected: !topicsLookSame(resolved.original, displayTitle),
     };
   }
 
   function buildFallbackTopic(topic) {
-    const analysis = analyzeTopic(topic, `${topic} is an important study topic.`, []);
-    const seeds = domainBlueprint(analysis);
-    const lines = [`${analysis.topic} is an important topic for students.`, `This overview explains ${analysis.short} in a clear study order.`];
-    seeds.forEach((seed) => {
-      lines.push(`== ${seed.title} ==`);
-      lines.push(`${seed.title} helps students understand ${analysis.short} more clearly.`);
-      lines.push(`Focus on the main ideas under ${seed.title} and connect them to ${analysis.topic}.`);
-    });
-    lines.push("== Conclusion ==");
-    lines.push(`In conclusion, revise each section of ${analysis.short} from introduction to final takeaways.`);
+    const analysis = analyzeTopic(topic, "", []);
+    const t = analysis.topic;
+    const curated = {
+      "Programming Fundamentals": [
+        "== What is Programming Fundamentals? ==",
+        "Programming fundamentals are the basic ideas used to write clear computer programs.",
+        "Students learn how to give a computer step-by-step instructions to solve problems.",
+        "These basics are used in almost every programming language.",
+        "== Core Concepts ==",
+        "A program is a set of instructions that a computer can follow.",
+        "Variables store values such as numbers, text, or true/false states.",
+        "Input and output let a program receive data and show results.",
+        "== Control Flow ==",
+        "Sequence means instructions run one after another in order.",
+        "Selection uses conditions (if/else) to choose different actions.",
+        "Loops repeat actions until a condition is met.",
+        "== Data and Operators ==",
+        "Common data types include integers, floating-point numbers, strings, and booleans.",
+        "Operators perform calculations and comparisons, such as add, subtract, equal, and greater than.",
+        "== Problem Solving ==",
+        "Programmers break a big problem into smaller steps before coding.",
+        "Algorithms describe the logic of a solution in a clear order.",
+        "Testing and debugging help find and fix mistakes in a program.",
+        "== Benefits ==",
+        "Learning programming fundamentals builds logical thinking and problem-solving skills.",
+        "These basics make it easier to learn languages like Python, Java, C, or JavaScript later.",
+        "== Challenges ==",
+        "Beginners often struggle with syntax errors and careful attention to detail.",
+        "Complex problems need practice, planning, and patience.",
+        "== Conclusion ==",
+        "Programming fundamentals give students a strong base for writing correct, readable programs.",
+      ],
+      "Computer Fundamentals": [
+        "== What is Computer Fundamentals? ==",
+        "Computer fundamentals cover the basic parts and working of a computer system.",
+        "Students learn hardware, software, data, and how computers process information.",
+        "== Hardware and Software ==",
+        "Hardware includes physical parts such as the CPU, memory, storage, keyboard, and monitor.",
+        "Software includes system programs and applications that tell hardware what to do.",
+        "== How a Computer Works ==",
+        "A computer accepts input, processes data, stores information, and produces output.",
+        "The CPU performs calculations and controls other parts of the system.",
+        "== Conclusion ==",
+        "Computer fundamentals help students understand how everyday digital devices work.",
+      ],
+    };
+
+    if (curated[t]) {
+      return { title: t, source: "topic", text: curated[t].join("\n") };
+    }
+
+    // Minimal honest fallback (never circular heading-echo text).
     return {
-      title: analysis.topic,
+      title: t,
       source: "topic",
-      text: lines.join("\n"),
+      text: [
+        `== What is ${t}? ==`,
+        `${t} is a study topic that covers the main ideas students need for class and exams.`,
+        `Start with the definition, then learn the key parts, uses, and important examples.`,
+        `== Key Points ==`,
+        `Identify the most important terms related to ${t}.`,
+        `Learn how the main ideas of ${t} connect to each other.`,
+        `Practice explaining ${t} in simple words with one real example.`,
+        `== Conclusion ==`,
+        `Revise ${t} by reviewing definitions, key points, and examples before a test.`,
+      ].join("\n"),
     };
   }
 
