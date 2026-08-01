@@ -7,7 +7,7 @@ declare(strict_types=1);
       <section class="study-ppt-panel">
         <label class="study-field">
           <span>Topic name</span>
-          <input type="text" id="studyTopic" maxlength="120" placeholder="Example: Photosynthesis, AI, Digital Marketing (typos are auto-corrected)" autocomplete="off" />
+          <input type="text" id="studyTopic" maxlength="120" placeholder="Example: Photosynthesis, AI, Digital Marketing" autocomplete="off" />
         </label>
 
         <label class="study-field">

@@ -1560,23 +1560,17 @@
 
     generateBtn.disabled = true;
     downloadBtn.disabled = true;
-    setStatus("Auto-correcting topic...");
+    setStatus("Preparing your presentation...");
 
     try {
       let title = rawTopic || "My Study Presentation";
       let slides;
-      let correctedNote = "";
       const seed = rawTopic || cleanText(material.split(/\n|[.!?]/)[0].slice(0, 80)) || title;
 
-      // Always correct first so titles/headings use the fixed topic.
+      // Normalize topic first so titles/headings use the best matching subject name.
       const resolved = await applyTopicCorrectionToInput(seed);
       title = resolved.corrected || seed;
-      if (resolved.changed) {
-        correctedNote = `Corrected “${resolved.original}” → “${title}”. `;
-        setStatus(`${correctedNote}Building presentation...`);
-      } else {
-        setStatus(`Building presentation for “${title}”...`);
-      }
+      setStatus(`Building presentation for “${title}”...`);
 
       if (material.length >= 40) {
         slides = buildSlidesFromMaterial(title, material, maxSlides);
@@ -1584,19 +1578,15 @@
         const content = await fetchTopicContent(title);
         title = content.title || title;
         if (topicInput && title) topicInput.value = title;
-        if (content.corrected && content.originalTopic && !topicsLookSame(content.originalTopic, title)) {
-          correctedNote = `Corrected “${content.originalTopic}” → “${title}”. `;
-        }
         slides = buildSlidesFromText(title, content.text, maxSlides);
       }
 
-      // Ensure slide 1 is always the corrected topic title.
+      // Ensure slide 1 is always the final topic title.
       if (slides[0]?.type === "title") {
         slides[0].title = title;
         if (!slides[0].body) {
           slides[0].body = professionalSubtitle(analyzeTopic(title, "", []));
         } else {
-          // Refresh subtitle against final corrected title.
           slides[0].body = professionalSubtitle(analyzeTopic(title, slides[0].body, []));
         }
       }
@@ -1610,7 +1600,7 @@
 
       renderPreview(slides, template);
       downloadBtn.disabled = false;
-      setStatus(`${correctedNote}${slides.length} slides ready for “${title}”.`, "ok");
+      setStatus(`${slides.length} slides ready for “${title}”.`, "ok");
     } catch (error) {
       deck = null;
       setStatus(error?.message || "Could not create the presentation.", "error");
@@ -1656,15 +1646,12 @@
     download();
   });
 
-  // Correct topic when user leaves the field (typos / abbreviations).
+  // Quietly normalize the topic when the user leaves the field.
   topicInput?.addEventListener("blur", async () => {
     const raw = cleanText(topicInput.value || "");
     if (raw.length < 2) return;
     try {
-      const resolved = await applyTopicCorrectionToInput(raw);
-      if (resolved.changed) {
-        setStatus(`Topic auto-corrected to “${resolved.corrected}”.`, "ok");
-      }
+      await applyTopicCorrectionToInput(raw);
     } catch (error) {
       // Ignore blur lookup failures; generate() will retry.
     }
