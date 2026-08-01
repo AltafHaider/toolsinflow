@@ -798,6 +798,31 @@
     return TEMPLATES.find((t) => t.id === id) || TEMPLATES[0];
   }
 
+  function expansionFor(raw) {
+    const key = cleanText(raw).toLowerCase().replace(/\./g, "").trim();
+    return TOPIC_EXPANSIONS[key] || TOPIC_PHRASE_FIXES[cleanText(raw).toLowerCase()] || "";
+  }
+
+  function prettyStudyTitle(title, preferred) {
+    const wiki = cleanText(title);
+    const pref = cleanText(preferred);
+    if (pref && topicsLookSame(wiki, pref)) return pref;
+    if (!wiki) return pref;
+    // Keep short acronyms / chemically styled titles as returned.
+    if (/^[A-Z0-9-]{2,8}$/.test(wiki)) return wiki;
+    return wiki;
+  }
+
+  async function wikiSearchSuggest(query) {
+    const url = `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&srlimit=5&srinfo=suggestion&srprop=title&format=json&origin=*`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error("Could not look up this topic right now.");
+    const data = await res.json();
+    const suggestion = cleanText(data?.query?.searchinfo?.suggestion || "");
+    const titles = (data?.query?.search || []).map((row) => row.title).filter(Boolean);
+    return { suggestion, titles };
+  }
+
   async function wikiOpenSearch(query) {
     const searchUrl = `https://en.wikipedia.org/w/api.php?action=opensearch&search=${encodeURIComponent(query)}&limit=5&namespace=0&format=json&origin=*`;
     const searchRes = await fetch(searchUrl);
@@ -807,14 +832,21 @@
   }
 
   function pickBestWikiTitle(query, titles) {
-    if (!titles.length) return "";
+    if (!titles?.length) return "";
     const q = cleanText(query).toLowerCase();
-    const exact = titles.find((t) => t.toLowerCase() === q);
-    if (exact) return exact;
-    const starts = titles.find((t) => t.toLowerCase().startsWith(q) || q.startsWith(t.toLowerCase()));
-    if (starts) return starts;
-    const contains = titles.find((t) => t.toLowerCase().includes(q) || q.includes(t.toLowerCase()));
-    return contains || titles[0];
+    const scored = titles.map((title) => {
+      const t = title.toLowerCase();
+      let score = 0;
+      if (t === q) score += 100;
+      if (t.startsWith(q) || q.startsWith(t)) score += 40;
+      if (t.includes(q) || q.includes(t)) score += 20;
+      if (/disambiguation/i.test(title)) score -= 50;
+      // Prefer concise study titles.
+      score -= Math.max(0, title.split(/\s+/).length - 4);
+      return { title, score };
+    });
+    scored.sort((a, b) => b.score - a.score);
+    return scored[0].score > 0 ? scored[0].title : titles[0];
   }
 
   async function resolveCanonicalTopic(rawInput) {
@@ -823,62 +855,115 @@
       return { original: "", corrected: "", changed: false };
     }
 
+    // 1) Known abbreviations / phrase fixes win immediately for study titles.
+    const known = expansionFor(original);
     const local = localNormalizeTopic(original);
-    const queries = [];
-    if (local) queries.push(local);
-    if (original && !topicsLookSame(original, local)) queries.push(original);
+    let corrected = known || local || original;
+    let wikiTitles = [];
 
-    let bestTitle = local || original;
-    for (const query of queries) {
+    // 2) Ask Wikipedia using the ORIGINAL text first (best for misspellings).
+    const queryOrder = [];
+    queryOrder.push(original);
+    if (local && !topicsLookSame(local, original)) queryOrder.push(local);
+    if (known && !topicsLookSame(known, original) && !topicsLookSame(known, local)) queryOrder.push(known);
+
+    for (const query of queryOrder) {
       try {
-        const titles = await wikiOpenSearch(query);
-        const chosen = pickBestWikiTitle(query, titles);
-        if (chosen) {
-          bestTitle = chosen;
+        const searched = await wikiSearchSuggest(query);
+        if (searched.suggestion) {
+          const suggestedLocal = localNormalizeTopic(searched.suggestion);
+          corrected = known && topicsLookSame(known, suggestedLocal)
+            ? known
+            : prettyStudyTitle(pickBestWikiTitle(suggestedLocal, searched.titles) || suggestedLocal, suggestedLocal);
+          wikiTitles = searched.titles;
           break;
         }
+        if (searched.titles.length) {
+          wikiTitles = searched.titles;
+          const best = pickBestWikiTitle(known || local || query, searched.titles);
+          if (best) {
+            corrected = known && topicsLookSame(known, best) ? known : prettyStudyTitle(best, local || known || best);
+            break;
+          }
+        }
       } catch (error) {
-        // Keep local correction if Wikipedia is unavailable.
+        // Try next strategy.
       }
     }
 
-    // Prefer readable study titles for common abbreviations even if wiki is shorter.
-    if (TOPIC_EXPANSIONS[original.toLowerCase().replace(/\./g, "")] && topicsLookSame(bestTitle, local)) {
-      bestTitle = local;
+    // 3) Fallback to opensearch if search API failed.
+    if (!wikiTitles.length) {
+      for (const query of queryOrder) {
+        try {
+          const titles = await wikiOpenSearch(query);
+          if (titles.length) {
+            const best = pickBestWikiTitle(known || local || query, titles);
+            corrected = known && topicsLookSame(known, best) ? known : prettyStudyTitle(best, local || known || best);
+            break;
+          }
+        } catch (error) {
+          // Keep local correction.
+        }
+      }
     }
+
+    // 4) Final polish from local dictionary when it clearly improved the input.
+    if (known) corrected = known;
+    else if (local && !topicsLookSame(original, local) && topicsLookSame(corrected, original)) {
+      corrected = local;
+    } else if (local && topicsLookSame(corrected, local)) {
+      corrected = local;
+    }
+
+    corrected = cleanText(corrected) || original;
 
     return {
       original,
-      corrected: bestTitle,
-      changed: !topicsLookSame(original, bestTitle),
+      corrected,
+      changed: !topicsLookSame(original, corrected),
     };
+  }
+
+  async function applyTopicCorrectionToInput(raw) {
+    const resolved = await resolveCanonicalTopic(raw);
+    if (resolved.corrected && topicInput) {
+      topicInput.value = resolved.corrected;
+    }
+    return resolved;
   }
 
   async function fetchTopicContent(topic) {
     const resolved = await resolveCanonicalTopic(topic);
-    const pageTitle = resolved.corrected || topic.trim();
-    const extractUrl = `https://en.wikipedia.org/w/api.php?action=query&prop=extracts&explaintext=1&exsectionformat=wiki&redirects=1&titles=${encodeURIComponent(pageTitle)}&format=json&origin=*`;
+    const lookup = resolved.corrected || cleanText(topic);
+
+    // Search-generator finds the right article even when the typed title is imperfect.
+    const extractUrl = `https://en.wikipedia.org/w/api.php?action=query&generator=search&gsrsearch=${encodeURIComponent(lookup)}&gsrlimit=1&prop=extracts&explaintext=1&exsectionformat=wiki&redirects=1&format=json&origin=*`;
     const extractRes = await fetch(extractUrl);
     if (!extractRes.ok) throw new Error("Could not load study content for this topic.");
     const extractData = await extractRes.json();
     const pages = extractData?.query?.pages || {};
     const page = Object.values(pages)[0];
     const extract = String(page?.extract || "").trim();
+
+    const known = expansionFor(resolved.original) || expansionFor(lookup);
+    const pageTitle = prettyStudyTitle(page?.title || lookup, known || resolved.corrected || lookup);
+
     if (!extract || page?.missing !== undefined) {
       const fallback = buildFallbackTopic(pageTitle);
       return {
         ...fallback,
         title: pageTitle,
         originalTopic: resolved.original,
-        corrected: resolved.changed,
+        corrected: !topicsLookSame(resolved.original, pageTitle),
       };
     }
+
     return {
-      title: page?.title || pageTitle,
+      title: pageTitle,
       source: "topic",
       text: extract,
       originalTopic: resolved.original,
-      corrected: resolved.changed,
+      corrected: !topicsLookSame(resolved.original, pageTitle),
     };
   }
 
@@ -1305,47 +1390,57 @@
   }
 
   async function generate() {
-    const topic = cleanText(topicInput?.value || "");
+    const rawTopic = cleanText(topicInput?.value || "");
     const material = String(materialInput?.value || "").trim();
     const maxSlides = Math.max(8, Math.min(20, Number(slideCountEl?.value || 12)));
     const template = getTemplate();
 
-    if (!topic && !material) {
+    if (!rawTopic && !material) {
       setStatus("Enter a topic name or paste study material first.", "error");
       return;
     }
 
     generateBtn.disabled = true;
     downloadBtn.disabled = true;
-    setStatus("Correcting topic and analyzing content...");
+    setStatus("Auto-correcting topic...");
 
     try {
-      let title = topic || "My Study Presentation";
+      let title = rawTopic || "My Study Presentation";
       let slides;
       let correctedNote = "";
+      const seed = rawTopic || cleanText(material.split(/\n|[.!?]/)[0].slice(0, 80)) || title;
+
+      // Always correct first so titles/headings use the fixed topic.
+      const resolved = await applyTopicCorrectionToInput(seed);
+      title = resolved.corrected || seed;
+      if (resolved.changed) {
+        correctedNote = `Corrected “${resolved.original}” → “${title}”. `;
+        setStatus(`${correctedNote}Building presentation...`);
+      } else {
+        setStatus(`Building presentation for “${title}”...`);
+      }
 
       if (material.length >= 40) {
-        const seed = topic || cleanText(material.split(/\n|[.!?]/)[0].slice(0, 60)) || title;
-        const resolved = await resolveCanonicalTopic(seed);
-        title = resolved.corrected || seed;
-        if (topicInput && resolved.corrected) topicInput.value = resolved.corrected;
-        if (resolved.changed) correctedNote = `Corrected to “${title}”. `;
-        setStatus(`${correctedNote}Building a topic-aware outline from your notes...`);
         slides = buildSlidesFromMaterial(title, material, maxSlides);
       } else {
-        const content = await fetchTopicContent(topic || material);
-        title = content.title;
+        const content = await fetchTopicContent(title);
+        title = content.title || title;
         if (topicInput && title) topicInput.value = title;
-        if (content.corrected && content.originalTopic) {
-          correctedNote = `Corrected “${content.originalTopic}” to “${title}”. `;
+        if (content.corrected && content.originalTopic && !topicsLookSame(content.originalTopic, title)) {
+          correctedNote = `Corrected “${content.originalTopic}” → “${title}”. `;
         }
-        setStatus(`${correctedNote}Building a custom presentation for ${title}...`);
         slides = buildSlidesFromText(title, content.text, maxSlides);
       }
 
       // Ensure slide 1 is always the corrected topic title.
       if (slides[0]?.type === "title") {
         slides[0].title = title;
+        if (!slides[0].body) {
+          slides[0].body = professionalSubtitle(analyzeTopic(title, "", []));
+        } else {
+          // Refresh subtitle against final corrected title.
+          slides[0].body = professionalSubtitle(analyzeTopic(title, slides[0].body, []));
+        }
       }
 
       deck = {
@@ -1357,7 +1452,7 @@
 
       renderPreview(slides, template);
       downloadBtn.disabled = false;
-      setStatus(`${correctedNote}${slides.length} slides ready for “${title}”. Download when ready.`, "ok");
+      setStatus(`${correctedNote}${slides.length} slides ready for “${title}”.`, "ok");
     } catch (error) {
       deck = null;
       setStatus(error?.message || "Could not create the presentation.", "error");
@@ -1401,6 +1496,27 @@
   });
   downloadBtn.addEventListener("click", () => {
     download();
+  });
+
+  // Correct topic when user leaves the field (typos / abbreviations).
+  topicInput?.addEventListener("blur", async () => {
+    const raw = cleanText(topicInput.value || "");
+    if (raw.length < 2) return;
+    try {
+      const resolved = await applyTopicCorrectionToInput(raw);
+      if (resolved.changed) {
+        setStatus(`Topic auto-corrected to “${resolved.corrected}”.`, "ok");
+      }
+    } catch (error) {
+      // Ignore blur lookup failures; generate() will retry.
+    }
+  });
+
+  topicInput?.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      generate();
+    }
   });
 
   renderTemplates();
