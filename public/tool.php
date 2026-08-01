@@ -138,7 +138,10 @@ $isPdfUpload = $needsPdfToWord || $needsMergePdf || $needsSplitPdf;
   <?php if ($tool && $needsPdfForms): ?>
   <script src="<?= $assetBase ?>/js/pdf-form-editor.js?v=13"></script>
   <?php elseif ($tool && $needsStudyPpt): ?>
-  <script src="<?= $assetBase ?>/js/study-ppt.js?v=12"></script>
+  <script>
+    window.STUDY_PPT_API = <?= json_encode(($pageBase === '' ? '' : rtrim((string) $pageBase, '/')) . '/api/study-ppt.php', JSON_UNESCAPED_SLASHES) ?>;
+  </script>
+  <script src="<?= $assetBase ?>/js/study-ppt.js?v=13"></script>
   <?php elseif ($tool): ?>
   <script src="<?= $assetBase ?>/js/image-core.js?v=21"></script>
   <script src="<?= $assetBase ?>/js/tools.js?v=44"></script>

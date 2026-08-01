@@ -1649,6 +1649,81 @@
     return pptx;
   }
 
+  function studyPptApiUrl() {
+    if (window.STUDY_PPT_API) return String(window.STUDY_PPT_API);
+    try {
+      const script = document.querySelector('script[src*="study-ppt.js"]');
+      if (script?.src) {
+        const u = new URL(script.src, window.location.href);
+        return u.pathname.replace(/\/assets\/js\/study-ppt\.js.*$/i, "/api/study-ppt.php");
+      }
+    } catch (error) {
+      // ignore
+    }
+    return "api/study-ppt.php";
+  }
+
+  function slidesFromChatGpt(payload, maxSlides) {
+    const title = cleanText(payload.title) || "Study Presentation";
+    const subtitle = cleanText(payload.subtitle) || professionalSubtitle(analyzeTopic(title, "", []));
+    const slides = [{ type: "title", title, body: subtitle }];
+    const items = Array.isArray(payload.slides) ? payload.slides : [];
+
+    items.forEach((item, index) => {
+      if (slides.length >= maxSlides) return;
+      const slideTitle = cleanText(item?.title || "");
+      const bullets = toBullets(item?.bullets || [], 5);
+      if (!slideTitle || !bullets.length) return;
+      const isEnd = index === items.length - 1 || /^conclusion$/i.test(slideTitle);
+      if (isEnd) {
+        while (slides.length >= maxSlides) slides.pop();
+        slides.push({ type: "end", title: slideTitle, bullets });
+        return;
+      }
+      slides.push({ type: "content", title: slideTitle, bullets });
+    });
+
+    if (!slides.some((s) => s.type === "end") && slides.length < maxSlides) {
+      slides.push({
+        type: "end",
+        title: "Conclusion",
+        bullets: toBullets([
+          `${title} is best revised by reviewing each section in order.`,
+          `Explain the main ideas of ${title} in your own words.`,
+        ], 4),
+      });
+    }
+
+    return slides.slice(0, maxSlides);
+  }
+
+  async function fetchChatGptDeck(topic, material, maxSlides) {
+    const res = await fetch(studyPptApiUrl(), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        topic,
+        material: material || "",
+        slideCount: maxSlides,
+        simpleWords: Boolean(simpleWordsEl?.checked),
+      }),
+    });
+
+    let data = null;
+    try {
+      data = await res.json();
+    } catch (error) {
+      data = null;
+    }
+
+    if (!res.ok || !data?.ok) {
+      const err = new Error(data?.message || "Could not create presentation with ChatGPT.");
+      err.code = data?.error || "chatgpt_failed";
+      throw err;
+    }
+    return data;
+  }
+
   async function generate() {
     const rawTopic = cleanText(topicInput?.value || "");
     const material = String(materialInput?.value || "").trim();
@@ -1669,27 +1744,36 @@
       let slides;
       const seed = rawTopic || cleanText(material.split(/\n|[.!?]/)[0].slice(0, 80)) || title;
 
-      // Normalize topic first so titles/headings use the best matching subject name.
       const resolved = await applyTopicCorrectionToInput(seed);
       title = resolved.corrected || seed;
-      setStatus(`Building presentation for “${title}”...`);
+      if (topicInput && title) topicInput.value = title;
+      setStatus(`Creating presentation for “${title}”...`);
 
-      if (material.length >= 40) {
-        slides = buildSlidesFromMaterial(title, material, maxSlides);
-      } else {
-        const content = await fetchTopicContent(title);
-        title = content.title || title;
+      try {
+        const ai = await fetchChatGptDeck(title, material, maxSlides);
+        title = cleanText(ai.title) || title;
         if (topicInput && title) topicInput.value = title;
-        slides = buildSlidesFromText(title, content.text, maxSlides);
+        slides = slidesFromChatGpt(ai, maxSlides);
+      } catch (aiError) {
+        if (aiError?.code === "not_configured") {
+          throw new Error("Add your OpenAI API key to the .env file (see .env.example), then try again.");
+        }
+        // If ChatGPT fails after configuration, fall back to Wikipedia-based content.
+        setStatus("ChatGPT unavailable right now. Building from study sources...");
+        if (material.length >= 40) {
+          slides = buildSlidesFromMaterial(title, material, maxSlides);
+        } else {
+          const content = await fetchTopicContent(title);
+          title = content.title || title;
+          if (topicInput && title) topicInput.value = title;
+          slides = buildSlidesFromText(title, content.text, maxSlides);
+        }
       }
 
-      // Ensure slide 1 is always the final topic title.
       if (slides[0]?.type === "title") {
         slides[0].title = title;
         if (!slides[0].body) {
           slides[0].body = professionalSubtitle(analyzeTopic(title, "", []));
-        } else {
-          slides[0].body = professionalSubtitle(analyzeTopic(title, slides[0].body, []));
         }
       }
 
