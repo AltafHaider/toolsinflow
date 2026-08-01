@@ -12,17 +12,18 @@ declare(strict_types=1);
 
         <label class="study-field">
           <span>Or paste your study material</span>
-          <textarea id="studyMaterial" rows="10" placeholder="Paste notes, textbook text, or class material here. Tip: use headings like What is..., Uses, Properties, Advantages, Disadvantages, Examples, Conclusion."></textarea>
+          <textarea id="studyMaterial" rows="10" placeholder="Paste notes, textbook text, or class material here. Tip: use clear headings from your topic (for example Process, Types, Applications, Challenges)."></textarea>
         </label>
 
         <div class="study-options">
           <label class="study-field study-field--inline">
             <span>Slide count</span>
             <select id="studySlideCount">
-              <option value="6">6 slides</option>
-              <option value="8" selected>8 slides</option>
+              <option value="8">8 slides</option>
               <option value="10">10 slides</option>
-              <option value="12">12 slides</option>
+              <option value="12" selected>12 slides</option>
+              <option value="16">16 slides</option>
+              <option value="20">20 slides</option>
             </select>
           </label>
           <label class="study-check">

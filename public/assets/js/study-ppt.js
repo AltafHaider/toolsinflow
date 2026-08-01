@@ -208,31 +208,6 @@
     return t.split(/\s+/).length <= 8 && /:$/.test(t);
   }
 
-  function classifySectionTitle(title) {
-    const t = cleanText(title).toLowerCase();
-    if (/^(see also|references|notes|external links|further reading|bibliography|citations?|research|gallery)$/i.test(t)) return "skip";
-    if (/(histor|timeline|chronolog|\b19\d0s\b|\b20\d0s\b|background)/i.test(t)) return "skip";
-    if (/(disadvantage|limitation|drawback|weakness|problem|cons?\b|risk|challenge)/i.test(t)) return "cons";
-    if (/(advantage|benefit|strength|merit|pros?\b|positive)/i.test(t)) return "pros";
-    if (/(use case|uses?|application|purpose|importance|why |function|role|where)/i.test(t)) return "uses";
-    if (/(propert|characteristic|feature|attribute|component|part|structure|type|kind|classif|element|storage|language)/i.test(t)) return "properties";
-    if (/(example|case stud|in practice|real[- ]?world)/i.test(t)) return "examples";
-    if (/(definition|overview|introduction|about|etymolog|meaning|concept|terminolog)/i.test(t)) return "definition";
-    if (/(conclusion|summary|recap)/i.test(t)) return "conclusion";
-    return "extra";
-  }
-
-  function classifySentence(sentence) {
-    const s = sentence.toLowerCase();
-    if (/(disadvantage|limitation|drawback|problem|risk|challenge|however|although|not always)/i.test(s)) return "cons";
-    if (/(advantage|benefit|helpful|useful because|strength|makes it easy)/i.test(s)) return "pros";
-    if (/(used (for|in|to)|used by|helps|allows|enables|application|purpose|important (for|because)|useful in)/i.test(s)) return "uses";
-    if (/(property|properties|characteristic|feature|type of|types of|consists of|made up of|includes|component|structure)/i.test(s)) return "properties";
-    if (/(for example|such as|e\.g\.|including)/i.test(s)) return "examples";
-    if (/\b(is|are)\s+(a|an|the)\b|\brefers to\b|\bmeans\b|\bdefined as\b|\bknown as\b/i.test(s)) return "definition";
-    return "extra";
-  }
-
   function parseWikiSections(rawText) {
     const text = String(rawText || "").replace(/\r/g, "");
     const parts = text.split(/\n(?=={2,}\s*[^=].*?={2,}\s*$)/m);
@@ -246,14 +221,13 @@
       if (headingMatch) {
         const title = cleanText(headingMatch[1]);
         const body = cleanText(headingMatch[2]);
-        if (title && body) sections.push({ title, body, kind: classifySectionTitle(title) });
+        if (title && body) sections.push({ title, body });
         return;
       }
       if (index === 0) lead = cleanText(trimmed);
-      else if (trimmed.length > 40) sections.push({ title: "More details", body: cleanText(trimmed), kind: "extra" });
+      else if (trimmed.length > 40) sections.push({ title: "More details", body: cleanText(trimmed) });
     });
 
-    // Fallback: plain paragraphs / note-style headings without wiki markup.
     if (!sections.length) {
       const blocks = text.split(/\n{2,}/).map((b) => b.trim()).filter(Boolean);
       if (blocks.length) {
@@ -266,10 +240,9 @@
             sections.push({
               title: titleCase(title),
               body: cleanText(lines.slice(1).join(" ")),
-              kind: classifySectionTitle(title),
             });
           } else {
-            sections.push({ title: "Key ideas", body: cleanText(block), kind: "extra" });
+            sections.push({ title: "Key ideas", body: cleanText(block) });
           }
         });
       }
@@ -278,81 +251,338 @@
     return { lead: cleanText(lead), sections };
   }
 
-  function collectByKind(bucket, kind, limit = 6) {
-    return toBullets(bucket[kind] || [], limit);
+  function isNoiseSection(title) {
+    const t = cleanText(title);
+    if (!t) return true;
+    if (/^(see also|references|notes|external links|further reading|bibliography|citations?|research|gallery|footnotes?|sources?|works cited)$/i.test(t)) return true;
+    if (/^\d{3,4}s?\b/i.test(t)) return true;
+    if (/^(late|early|mid)\s+\d{4}/i.test(t)) return true;
+    if (/^(more details|key ideas)$/i.test(t) && t.length < 12) return false;
+    return false;
   }
 
-  function buildStudyBuckets(title, text) {
-    const { lead, sections } = parseWikiSections(text);
-    const bucket = {
-      definition: [],
-      uses: [],
-      properties: [],
-      pros: [],
-      cons: [],
-      examples: [],
-      conclusion: [],
-      extra: [],
+  function shortTopicLabel(title) {
+    const t = cleanText(title);
+    const aliases = [
+      [/artificial intelligence/i, "AI"],
+      [/machine learning/i, "ML"],
+      [/digital marketing/i, "Digital Marketing"],
+      [/world war\s*ii|world war\s*2/i, "WWII"],
+      [/world war\s*i\b|world war\s*1/i, "WWI"],
+    ];
+    for (const [re, label] of aliases) {
+      if (re.test(t)) return label;
+    }
+    const words = t.split(/\s+/);
+    if (words.length <= 3) return t;
+    return words.slice(0, 3).join(" ");
+  }
+
+  function scoreText(text, patterns) {
+    const s = String(text || "").toLowerCase();
+    return patterns.reduce((score, re) => score + (re.test(s) ? 1 : 0), 0);
+  }
+
+  function analyzeTopic(title, lead, sections) {
+    const corpus = [title, lead, ...sections.map((s) => `${s.title} ${s.body.slice(0, 220)}`)].join(" ");
+    const domains = [
+      { id: "science", score: scoreText(corpus, [/photosynth|biology|chemistry|physics|organism|molecule|atom|enzyme|cell\b|ecosystem|reaction|chlorophyll|scientific|anatomy|genetics/i]) },
+      { id: "technology", score: scoreText(corpus, [/artificial intelligence|\bai\b|machine learning|algorithm|computer|software|robot|neural|programming|database|cyber|network|automation|data science/i]) },
+      { id: "business", score: scoreText(corpus, [/marketing|business|finance|seo|advertis|brand|commerce|startup|entrepreneur|sales|ppc|email marketing|social media|market analysis|customer/i]) },
+      { id: "history", score: scoreText(corpus, [/war|revolution|empire|ancient|century|civilization|dynasty|colonial|independence|historical|timeline|battle|treaty|kingdom/i]) },
+      { id: "math", score: scoreText(corpus, [/algebra|geometry|calculus|fraction|theorem|mathematics|triangle|polynomial|equation|integer|probability/i]) },
+      { id: "health", score: scoreText(corpus, [/health|disease|medicine|virus|vaccine|nutrition|hospital|symptom|treatment|therapy/i]) },
+      { id: "geography", score: scoreText(corpus, [/climate|geography|continent|river|ocean|latitude|longitude|terrain|rainfall|population/i]) },
+    ];
+    domains.sort((a, b) => b.score - a.score);
+    const best = domains[0].score > 0 ? domains[0].id : "general";
+    return {
+      domain: best,
+      topic: titleCase(title),
+      short: shortTopicLabel(title),
+      corpus,
     };
+  }
 
-    splitSentences(lead).slice(0, 6).forEach((s) => {
-      const kind = classifySentence(s);
-      bucket[kind === "extra" ? "definition" : kind].push(s);
-    });
+  function topicAwareHeading(rawTitle, analysis) {
+    const topic = analysis.topic;
+    const short = analysis.short;
+    const raw = titleCase(cleanText(rawTitle).replace(/[:.]+$/, ""));
+    const lower = raw.toLowerCase();
 
-    sections.forEach((section) => {
-      if (section.kind === "skip") return;
-      const sentences = splitSentences(section.body);
-      if (!sentences.length) return;
-      if (["definition", "uses", "properties", "pros", "cons", "examples", "conclusion"].includes(section.kind)) {
-        bucket[section.kind].push(...sentences.slice(0, 6));
-      } else {
-        sentences.slice(0, 4).forEach((s) => {
-          const kind = classifySentence(s);
-          bucket[kind].push(s);
-        });
+    if (/^(introduction|intro|overview)$/i.test(raw)) return "Introduction";
+    if (/^(conclusion|summary|recap)$/i.test(raw)) return "Conclusion";
+    if (/^(history|historical background|background|origins?)$/i.test(raw)) return `History of ${short}`;
+    if (/^(types?|kinds?|categories|classification)$/i.test(raw)) return `Types of ${short}`;
+    if (/^(applications?|uses?|use cases?)$/i.test(raw)) return `Applications of ${short}`;
+    if (/^(advantages?|benefits?|pros)$/i.test(raw)) return `Benefits of ${short}`;
+    if (/^(disadvantages?|limitations?|challenges?|cons|risks?)$/i.test(raw)) return `Challenges of ${short}`;
+    if (/^(importance|significance)$/i.test(raw)) return `Importance of ${short}`;
+    if (/^(examples?|case studies)$/i.test(raw)) return `Real-Life Examples of ${short}`;
+    if (/^(definition|terminology|meaning|concept)$/i.test(raw)) return `Definition of ${short}`;
+    if (/^(process|mechanism|how it works)$/i.test(raw)) return `Process of ${short}`;
+    if (/^(future|outlook|trends?)$/i.test(raw)) return `Future of ${short}`;
+    if (/^(factors?)$/i.test(raw)) return `Factors Affecting ${short}`;
+
+    // Keep distinctive section names (SEO, Machine Learning, Chemical equation, etc.)
+    if (!lower.includes(short.toLowerCase()) && !lower.includes(topic.toLowerCase()) && raw.split(/\s+/).length <= 5) {
+      if (/^(components?|features?|structure|methods?|techniques?|tools?|strategies?)$/i.test(raw)) {
+        return `${raw} of ${short}`;
+      }
+    }
+    return raw;
+  }
+
+  function domainBlueprint(analysis) {
+    const t = analysis.topic;
+    const s = analysis.short;
+    const blueprints = {
+      science: [
+        { role: "intro", title: "Introduction", match: /introduction|overview|definition|terminolog|concept|meaning/i },
+        { role: "definition", title: `Definition of ${s}`, match: /definition|what is|meaning|concept|terminolog/i },
+        { role: "process", title: `Process of ${s}`, match: /process|mechanism|stage|step|cycle|pathway|how .+ works/i },
+        { role: "equation", title: "Chemical Equation", match: /equation|formula|reaction|stoichi/i },
+        { role: "factors", title: `Factors Affecting ${s}`, match: /factor|condition|affect|influence|requirement|limit/i },
+        { role: "types", title: `Types of ${s}`, match: /type|kind|classif|form|variant/i },
+        { role: "importance", title: `Importance of ${s}`, match: /importance|significance|role|why|benefit/i },
+        { role: "examples", title: `Real-Life Examples of ${s}`, match: /example|application|in nature|use case|real/i },
+      ],
+      technology: [
+        { role: "intro", title: "Introduction", match: /introduction|overview|definition|concept|terminolog/i },
+        { role: "history", title: `History of ${s}`, match: /histor|origin|development|evolution|background/i },
+        { role: "types", title: `Types of ${s}`, match: /type|kind|classif|categor|narrow|general/i },
+        { role: "core", title: "Core Concepts", match: /machine learning|deep learning|neural|algorithm|model|system|architecture|technique/i },
+        { role: "applications", title: `Applications of ${s}`, match: /application|use case|uses|applied|industry/i },
+        { role: "benefits", title: `Benefits of ${s}`, match: /benefit|advantage|strength|positive/i },
+        { role: "challenges", title: `Challenges of ${s}`, match: /challenge|limitation|risk|ethic|problem|disadvantage|concern/i },
+        { role: "future", title: `Future of ${s}`, match: /future|trend|outlook|prospect|tomorrow/i },
+      ],
+      business: [
+        { role: "intro", title: "Introduction", match: /introduction|overview|definition|concept/i },
+        { role: "types", title: `Types of ${s}`, match: /type|channel|form|kind|categor/i },
+        { role: "seo", title: "SEO", match: /\bseo\b|search engine/i },
+        { role: "social", title: "Social Media Marketing", match: /social media|facebook|instagram|tiktok|linkedin/i },
+        { role: "email", title: "Email Marketing", match: /email marketing|newsletter|email campaign/i },
+        { role: "ppc", title: "PPC Advertising", match: /\bppc\b|pay[- ]per[- ]click|paid search|ads?/i },
+        { role: "benefits", title: `Advantages of ${s}`, match: /advantage|benefit|strength|roi|growth/i },
+        { role: "challenges", title: `Challenges of ${s}`, match: /challenge|limitation|risk|disadvantage|problem/i },
+        { role: "trends", title: `Future Trends in ${s}`, match: /future|trend|outlook|emerging/i },
+      ],
+      history: [
+        { role: "intro", title: "Introduction", match: /introduction|overview|background/i },
+        { role: "causes", title: `Causes of ${s}`, match: /cause|origin|reason|background|lead up/i },
+        { role: "timeline", title: "Timeline of Key Events", match: /timeline|chronolog|sequence|course|events?/i },
+        { role: "people", title: "Important People", match: /leader|people|figure|personality|commander|president|king/i },
+        { role: "events", title: "Major Events", match: /battle|event|campaign|turning point|siege/i },
+        { role: "impact", title: `Impact of ${s}`, match: /impact|effect|consequence|aftermath|result/i },
+        { role: "legacy", title: "Legacy and Significance", match: /legacy|significance|importance|memory|historiography/i },
+      ],
+      math: [
+        { role: "intro", title: "Introduction", match: /introduction|overview|definition/i },
+        { role: "definition", title: `Definition of ${s}`, match: /definition|meaning|concept/i },
+        { role: "rules", title: "Key Rules and Formulas", match: /formula|rule|theorem|property|identity/i },
+        { role: "methods", title: "Methods / Steps", match: /method|step|procedure|solve|approach/i },
+        { role: "examples", title: "Worked Examples", match: /example|problem|exercise|sample/i },
+        { role: "mistakes", title: "Common Mistakes", match: /mistake|error|pitfall|confusion|wrong/i },
+        { role: "practice", title: "Practice Tips", match: /practice|tip|revise|remember|strategy/i },
+      ],
+      health: [
+        { role: "intro", title: "Introduction", match: /introduction|overview|definition/i },
+        { role: "causes", title: "Causes", match: /cause|risk factor|origin|trigger/i },
+        { role: "symptoms", title: "Symptoms", match: /symptom|sign|indication/i },
+        { role: "prevention", title: "Prevention", match: /prevention|prevent|avoid|protect/i },
+        { role: "treatment", title: "Treatment", match: /treatment|therapy|cure|manage|medicine/i },
+        { role: "importance", title: "Why It Matters", match: /importance|impact|health|awareness/i },
+      ],
+      geography: [
+        { role: "intro", title: "Introduction", match: /introduction|overview|definition/i },
+        { role: "location", title: "Location and Features", match: /location|feature|landform|region|position/i },
+        { role: "climate", title: "Climate and Environment", match: /climate|weather|environment|rainfall|temperature/i },
+        { role: "people", title: "People and Economy", match: /population|people|economy|culture|industry/i },
+        { role: "importance", title: "Importance", match: /importance|significance|role|value/i },
+        { role: "issues", title: "Current Issues", match: /issue|challenge|problem|conservation|threat/i },
+      ],
+      general: [
+        { role: "intro", title: "Introduction", match: /introduction|overview|definition|concept|meaning/i },
+        { role: "keyideas", title: `Key Ideas about ${s}`, match: /key|main|core|basic|important/i },
+        { role: "parts", title: `Main Parts of ${s}`, match: /part|component|element|structure|feature|type/i },
+        { role: "how", title: `How ${s} Works`, match: /process|work|method|function|mechanism/i },
+        { role: "uses", title: `Why ${s} Matters`, match: /importance|application|use|benefit|role|why/i },
+        { role: "examples", title: `Examples of ${s}`, match: /example|case|instance|real/i },
+        { role: "challenges", title: `Challenges related to ${s}`, match: /challenge|limitation|problem|risk|issue/i },
+      ],
+    };
+    return blueprints[analysis.domain] || blueprints.general;
+  }
+
+  function findBestSection(sections, used, match) {
+    let best = null;
+    let bestScore = 0;
+    sections.forEach((section, index) => {
+      if (used.has(index) || isNoiseSection(section.title)) return;
+      let score = 0;
+      if (match.test(section.title)) score += 5;
+      if (match.test(section.body.slice(0, 280))) score += 2;
+      score += Math.min(2, splitSentences(section.body).length / 4);
+      if (score > bestScore) {
+        bestScore = score;
+        best = { section, index, score };
       }
     });
+    return bestScore >= 2 ? best : null;
+  }
 
-    // If a category is empty, try to infer from leftover sentences.
-    const all = [
-      ...splitSentences(lead),
-      ...sections.flatMap((s) => splitSentences(s.body)),
-    ];
-    all.forEach((s) => {
-      const kind = classifySentence(s);
-      if ((bucket[kind] || []).length < 4) bucket[kind].push(s);
+  function composeTopicOutline(analysis, sections, maxContentSlides) {
+    const outline = [];
+    const used = new Set();
+    const usable = sections
+      .map((section, index) => ({ section, index }))
+      .filter(({ section }) => {
+        if (isNoiseSection(section.title)) return false;
+        const sentences = splitSentences(section.body);
+        return sentences.length >= 2 || cleanText(section.body).length > 140;
+      });
+
+    // Always open with Introduction.
+    outline.push({
+      role: "intro",
+      title: "Introduction",
+      sourceIndexes: [],
+      match: /introduction|overview|definition|concept/i,
+      useLead: true,
     });
 
-    if (!bucket.definition.length) {
-      bucket.definition.push(`${title} is an important topic students should understand clearly.`);
-      if (all[0]) bucket.definition.push(all[0]);
-    }
-    if (!bucket.uses.length) {
-      const useLike = all.filter((s) => /use|help|important|need|allow|purpose|learn/i.test(s));
-      bucket.uses.push(...(useLike.length ? useLike.slice(0, 4) : [
-        `People study ${title} to understand how it works in real life.`,
-        `Knowing ${title} helps with school work and practical problems.`,
-      ]));
-    }
-    if (!bucket.properties.length) {
-      const propLike = all.filter((s) => /type|part|feature|include|consist|form|kind|main/i.test(s));
-      if (propLike.length) bucket.properties.push(...propLike.slice(0, 4));
-    }
-    if (!bucket.pros.length) {
-      const proLike = all.filter((s) => /advantage|benefit|easy|fast|better|useful|efficient/i.test(s));
-      if (proLike.length) bucket.pros.push(...proLike.slice(0, 4));
-    }
-    if (!bucket.cons.length) {
-      const conLike = all.filter((s) => /disadvantage|limit|problem|hard|risk|cost|challenge|however/i.test(s));
-      if (conLike.length) bucket.cons.push(...conLike.slice(0, 4));
-    }
-    if (!bucket.examples.length) {
-      const exLike = all.filter((s) => /example|such as|for instance|including|e\.g\./i.test(s));
-      if (exLike.length) bucket.examples.push(...exLike.slice(0, 4));
+    // Prefer distinctive Wikipedia / material section titles first (topic-aware renaming).
+    usable.forEach(({ section, index }) => {
+      if (outline.length >= maxContentSlides) return;
+      const heading = topicAwareHeading(section.title, analysis);
+      if (/^conclusion$/i.test(heading)) return;
+      if (outline.some((item) => item.title.toLowerCase() === heading.toLowerCase())) return;
+      // Skip ultra-generic leftovers if we already have enough distinctive slides.
+      used.add(index);
+      outline.push({
+        role: "section",
+        title: heading,
+        sourceIndexes: [index],
+        match: new RegExp(section.title.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i"),
+        useLead: false,
+      });
+    });
+
+    // Fill missing conceptual gaps from a domain-specific blueprint.
+    if (outline.length < Math.min(6, maxContentSlides)) {
+      domainBlueprint(analysis).forEach((seed) => {
+        if (outline.length >= maxContentSlides) return;
+        if (outline.some((item) => item.role === seed.role || item.title.toLowerCase() === seed.title.toLowerCase())) return;
+        const found = findBestSection(sections, used, seed.match);
+        if (found) {
+          used.add(found.index);
+          outline.push({
+            role: seed.role,
+            title: topicAwareHeading(found.section.title, analysis) || seed.title,
+            sourceIndexes: [found.index],
+            match: seed.match,
+            useLead: seed.role === "intro",
+          });
+        } else if (seed.role !== "intro") {
+          outline.push({
+            role: seed.role,
+            title: seed.title,
+            sourceIndexes: [],
+            match: seed.match,
+            useLead: false,
+            soft: true,
+          });
+        }
+      });
     }
 
-    return bucket;
+    // Keep intro first; trim soft placeholders if we are over budget.
+    const intro = outline[0];
+    let rest = outline.slice(1);
+    rest = rest.filter((item, idx) => !(item.soft && idx > 4 && rest.length > maxContentSlides));
+    while (rest.length > maxContentSlides - 1) {
+      const softIdx = rest.map((item, i) => (item.soft ? i : -1)).filter((i) => i >= 0).pop();
+      if (softIdx == null) {
+        rest.pop();
+      } else {
+        rest.splice(softIdx, 1);
+      }
+    }
+
+    return [intro, ...rest].slice(0, maxContentSlides);
+  }
+
+  function gatherBulletsForItem(item, analysis, lead, sections, usedSentences) {
+    const pool = [];
+    if (item.useLead || item.role === "intro") {
+      pool.push(...splitSentences(lead).slice(0, 5));
+    }
+    item.sourceIndexes.forEach((index) => {
+      const section = sections[index];
+      if (section) pool.push(...splitSentences(section.body).slice(0, 8));
+    });
+    if (pool.length < 3 && item.match) {
+      sections.forEach((section) => {
+        if (isNoiseSection(section.title)) return;
+        if (item.match.test(section.title) || item.match.test(section.body.slice(0, 320))) {
+          pool.push(...splitSentences(section.body).slice(0, 4));
+        }
+      });
+    }
+    if (pool.length < 2) {
+      const keywords = `${item.title} ${analysis.short}`.toLowerCase().split(/[^a-z0-9]+/).filter((w) => w.length > 3);
+      const all = [...splitSentences(lead), ...sections.flatMap((s) => splitSentences(s.body))];
+      all.forEach((sentence) => {
+        const lower = sentence.toLowerCase();
+        if (keywords.some((k) => lower.includes(k))) pool.push(sentence);
+      });
+    }
+
+    const unique = [];
+    pool.forEach((sentence) => {
+      const key = sentence.toLowerCase();
+      if (usedSentences.has(key)) return;
+      usedSentences.add(key);
+      unique.push(sentence);
+    });
+
+    if (unique.length) return toBullets(unique, 5);
+
+    // Topic-aware fallback only when source text is thin for that heading.
+    const s = analysis.short;
+    const fallbacks = {
+      intro: [
+        `${analysis.topic} is an important topic for study and real-life understanding.`,
+        `This presentation explains ${s} in a clear order for students.`,
+      ],
+      definition: [`${analysis.topic} means the main idea and terms students should learn first.`],
+      process: [`${s} happens through clear steps that build on each other.`],
+      equation: [`The formula or equation linked to ${s} helps explain the process in short form.`],
+      factors: [`Several conditions can speed up, slow down, or change ${s}.`],
+      types: [`${s} can be grouped into useful types or categories for easier learning.`],
+      applications: [`${s} is used in school work, industry, and everyday situations.`],
+      benefits: [`Learning ${s} helps students solve problems and explain ideas with confidence.`],
+      challenges: [`${s} also has limits, risks, or hard parts that students should remember.`],
+      future: [`New tools and research continue to shape the future of ${s}.`],
+      examples: [`Real examples make ${s} easier to remember in exams and projects.`],
+      conclusion: [`In short, ${s} is best revised from introduction to key ideas and final takeaways.`],
+    };
+    return toBullets(fallbacks[item.role] || [
+      `${item.title} is an important part of understanding ${s}.`,
+      `Focus on the main points under “${item.title}” while revising ${analysis.topic}.`,
+    ], 4);
+  }
+
+  function buildConclusionBullets(analysis, lead, sections, usedSentences) {
+    const points = [];
+    const leadPoints = splitSentences(lead).filter((s) => !usedSentences.has(s.toLowerCase())).slice(0, 1);
+    points.push(...leadPoints);
+    const closing = sections.find((section) => /conclusion|summary|legacy|importance|future/i.test(section.title));
+    if (closing) points.push(...splitSentences(closing.body).slice(0, 2));
+    points.push(`${analysis.topic} is best understood by reviewing each section in order.`);
+    points.push(`Revise the key headings of this deck and explain ${analysis.short} in your own words.`);
+    return toBullets(points, 4);
   }
 
   function pushContentSlide(slides, title, bullets, maxSlides) {
@@ -360,17 +590,6 @@
     if (!clean.length || slides.length >= maxSlides - 1) return false;
     slides.push({ type: "content", title, bullets: clean });
     return true;
-  }
-
-  function buildConclusionBullets(title, bucket) {
-    const points = [];
-    const def = collectByKind(bucket, "definition", 1)[0];
-    const use = collectByKind(bucket, "uses", 1)[0];
-    if (def) points.push(def);
-    if (use) points.push(use);
-    points.push(`${title} has clear ideas you can revise with short notes and examples.`);
-    points.push("Review the definition, uses, and key points before a test.");
-    return toBullets(points, 4);
   }
 
   function templateButtonHtml(tpl) {
@@ -449,104 +668,48 @@
   }
 
   function buildFallbackTopic(topic) {
-    const t = titleCase(topic);
+    const analysis = analyzeTopic(topic, `${topic} is an important study topic.`, []);
+    const seeds = domainBlueprint(analysis);
+    const lines = [`${analysis.topic} is an important topic for students.`, `This overview explains ${analysis.short} in a clear study order.`];
+    seeds.forEach((seed) => {
+      lines.push(`== ${seed.title} ==`);
+      lines.push(`${seed.title} helps students understand ${analysis.short} more clearly.`);
+      lines.push(`Focus on the main ideas under ${seed.title} and connect them to ${analysis.topic}.`);
+    });
+    lines.push("== Conclusion ==");
+    lines.push(`In conclusion, revise each section of ${analysis.short} from introduction to final takeaways.`);
     return {
-      title: t,
+      title: analysis.topic,
       source: "topic",
-      text: [
-        `== What is ${t}? ==`,
-        `${t} is an important school topic.`,
-        `In simple words, ${t} means the main idea students need to understand for class and exams.`,
-        `== Uses ==`,
-        `Students learn ${t} to solve problems and explain ideas clearly.`,
-        `${t} is useful in real life, homework, and tests.`,
-        `Teachers often ask how ${t} works and why it matters.`,
-        `== Properties and key points ==`,
-        `${t} has main parts or steps that should be learned one by one.`,
-        `Key terms connected to ${t} help you remember the topic faster.`,
-        `Examples make ${t} easier to understand.`,
-        `== Advantages ==`,
-        `Learning ${t} builds strong basics for harder lessons later.`,
-        `Clear notes on ${t} save time during revision.`,
-        `== Disadvantages or challenges ==`,
-        `${t} can feel hard if you only memorize words without examples.`,
-        `Skipping practice makes ${t} easy to forget before a test.`,
-        `== Examples ==`,
-        `Try one classroom example and one real-life example of ${t}.`,
-        `Write your own short example to check that you understand ${t}.`,
-        `== Conclusion ==`,
-        `In conclusion, ${t} is best learned through definition, uses, key points, and practice.`,
-      ].join("\n"),
+      text: lines.join("\n"),
     };
   }
 
   function buildSlidesFromText(title, text, maxSlides) {
-    const bucket = buildStudyBuckets(title, text);
+    const { lead, sections } = parseWikiSections(text);
+    const analysis = analyzeTopic(title, lead, sections);
+    const maxContentSlides = Math.max(4, maxSlides - 2); // title + conclusion reserved
+    const outline = composeTopicOutline(analysis, sections, maxContentSlides);
+    const usedSentences = new Set();
     const slides = [];
 
     slides.push({
       type: "title",
-      title,
-      body: "A clear study presentation for students: definition, uses, key points, and conclusion.",
+      title: analysis.topic,
+      body: `A topic-aware study presentation on ${analysis.short} (${analysis.domain} focus).`,
     });
 
-    pushContentSlide(
-      slides,
-      `What is ${title}?`,
-      collectByKind(bucket, "definition", 4),
-      maxSlides
-    );
-
-    pushContentSlide(
-      slides,
-      `Uses of ${title}`,
-      collectByKind(bucket, "uses", 4),
-      maxSlides
-    );
-
-    const properties = collectByKind(bucket, "properties", 5);
-    if (properties.length) {
-      pushContentSlide(slides, `Properties & key features`, properties, maxSlides);
-    }
-
-    const pros = collectByKind(bucket, "pros", 4);
-    const cons = collectByKind(bucket, "cons", 4);
-    if (pros.length && cons.length && slides.length < maxSlides - 2) {
-      // Keep pros/cons readable: separate slides when both exist.
-      pushContentSlide(slides, `Advantages of ${title}`, pros, maxSlides);
-      pushContentSlide(slides, `Disadvantages / limitations`, cons, maxSlides);
-    } else if (pros.length) {
-      pushContentSlide(slides, `Advantages of ${title}`, pros, maxSlides);
-    } else if (cons.length) {
-      pushContentSlide(slides, `Limitations to remember`, cons, maxSlides);
-    }
-
-    const examples = collectByKind(bucket, "examples", 4);
-    if (examples.length) {
-      pushContentSlide(slides, "Examples", examples, maxSlides);
-    }
-
-    // Fill remaining space with useful extras before conclusion (max 1–2 slides).
-    const extra = collectByKind(bucket, "extra", 8);
-    chunkBullets(extra, 4).slice(0, 2).forEach((group, index) => {
+    outline.forEach((item) => {
       if (slides.length >= maxSlides - 1) return;
-      pushContentSlide(
-        slides,
-        index === 0 ? "More important points" : "Extra revision points",
-        group,
-        maxSlides
-      );
+      const bullets = gatherBulletsForItem(item, analysis, lead, sections, usedSentences);
+      pushContentSlide(slides, item.title, bullets, maxSlides);
     });
 
-    const conclusion = collectByKind(bucket, "conclusion", 3);
-    // Always keep the last slide for a student-friendly conclusion.
     while (slides.length >= maxSlides) slides.pop();
     slides.push({
       type: "end",
       title: "Conclusion",
-      bullets: conclusion.length
-        ? toBullets([...conclusion, `Revise ${title} using the definition, uses, and key points.`], 4)
-        : buildConclusionBullets(title, bucket),
+      bullets: buildConclusionBullets(analysis, lead, sections, usedSentences),
     });
 
     return slides.slice(0, maxSlides);
@@ -556,13 +719,11 @@
     const topicTitle = title || "My Study Presentation";
     const normalized = String(material || "").replace(/\r/g, "").trim();
 
-    // Prefer structured student outline when headings exist; otherwise classify sentences.
-    const hasHeadings = /(?:^|\n)\s*(?:#{1,3}\s+|[A-Z][A-Za-z0-9 /&-]{2,40}:\s*$|={2,}.+={2,}|what is|uses?|pros?|cons?|advantages?|disadvantages?|properties|features|examples?|conclusion)/i.test(normalized);
+    const hasHeadings = /(?:^|\n)\s*(?:#{1,3}\s+|[A-Z][A-Za-z0-9 /&-]{2,60}:\s*$|={2,}.+={2,}|\b(introduction|definition|history|types?|process|applications?|benefits?|challenges?|examples?|conclusion|seo|ppc)\b)/i.test(normalized);
     if (!hasHeadings) {
       return buildSlidesFromText(topicTitle, normalized, maxSlides);
     }
 
-    // Convert common note headings into wiki-like sections for the same pipeline.
     const asWiki = normalized
       .split(/\n+/)
       .map((line) => {
@@ -927,7 +1088,7 @@
   async function generate() {
     const topic = cleanText(topicInput?.value || "");
     const material = String(materialInput?.value || "").trim();
-    const maxSlides = Math.max(6, Math.min(12, Number(slideCountEl?.value || 8)));
+    const maxSlides = Math.max(8, Math.min(20, Number(slideCountEl?.value || 12)));
     const template = getTemplate();
 
     if (!topic && !material) {
@@ -937,7 +1098,7 @@
 
     generateBtn.disabled = true;
     downloadBtn.disabled = true;
-    setStatus(material ? "Building student study slides from your notes..." : "Looking up the topic and building definition, uses, key points, and conclusion...");
+    setStatus(material ? "Analyzing your notes and building a topic-aware outline..." : "Analyzing the topic and building a custom presentation outline...");
 
     try {
       let title = topic || "My Study Presentation";
