@@ -310,6 +310,13 @@
     "digital mrketing": "Digital Marketing",
     "digtal marketing": "Digital Marketing",
     "digitial marketing": "Digital Marketing",
+    "programming fandamental": "Programming Fundamentals",
+    "programming fundemental": "Programming Fundamentals",
+    "programming fundamental": "Programming Fundamentals",
+    "programing fundamentals": "Programming Fundamentals",
+    "programing fandamental": "Programming Fundamentals",
+    "computer fandamental": "Computer Fundamentals",
+    "computer fundamental": "Computer Fundamentals",
     "data base": "Database",
     "data bases": "Databases",
     "cyber securty": "Cybersecurity",
@@ -347,7 +354,109 @@
     definately: "definitely",
     aquires: "acquires",
     aquired: "acquired",
+    fandamental: "fundamental",
+    fundemental: "fundamental",
+    fundamantal: "fundamental",
+    fundametal: "fundamental",
+    fundmental: "fundamental",
+    fondamentals: "fundamentals",
+    fandamentals: "fundamentals",
+    fundementals: "fundamentals",
+    programing: "programming",
+    programmin: "programming",
+    programin: "programming",
+    programmming: "programming",
+    computr: "computer",
+    computar: "computer",
+    algorithim: "algorithm",
+    algoritm: "algorithm",
+    netwok: "network",
+    sofware: "software",
+    hardwear: "hardware",
   };
+
+  // Common study titles used for offline fuzzy correction when Wikipedia is weak/unavailable.
+  const COMMON_STUDY_TOPICS = [
+    "Programming Fundamentals",
+    "Computer Fundamentals",
+    "Computer Science",
+    "Artificial Intelligence",
+    "Machine Learning",
+    "Digital Marketing",
+    "Database Management System",
+    "Operating System",
+    "Data Structures",
+    "Object-Oriented Programming",
+    "Software Engineering",
+    "Web Development",
+    "Cybersecurity",
+    "Photosynthesis",
+    "Climate Change",
+    "World War II",
+    "Human Anatomy",
+    "Financial Accounting",
+  ];
+
+  function editDistance(a, b) {
+    const s = String(a || "");
+    const t = String(b || "");
+    const m = s.length;
+    const n = t.length;
+    if (!m) return n;
+    if (!n) return m;
+    const dp = Array.from({ length: m + 1 }, () => new Array(n + 1).fill(0));
+    for (let i = 0; i <= m; i += 1) dp[i][0] = i;
+    for (let j = 0; j <= n; j += 1) dp[0][j] = j;
+    for (let i = 1; i <= m; i += 1) {
+      for (let j = 1; j <= n; j += 1) {
+        const cost = s[i - 1] === t[j - 1] ? 0 : 1;
+        dp[i][j] = Math.min(dp[i - 1][j] + 1, dp[i][j - 1] + 1, dp[i - 1][j - 1] + cost);
+      }
+    }
+    return dp[m][n];
+  }
+
+  function polishStudyTopic(title) {
+    let t = cleanText(title);
+    if (!t) return "";
+    t = t
+      .replace(/\bProgramming Fundamentals?\b/i, "Programming Fundamentals")
+      .replace(/\bComputer Fundamentals?\b/i, "Computer Fundamentals")
+      .replace(/\bData Structure\b/i, "Data Structures")
+      .replace(/\bOperating Systems\b/i, "Operating System");
+    return t;
+  }
+
+  function fuzzyMatchStudyTopic(raw) {
+    const input = cleanText(raw).toLowerCase();
+    if (!input) return "";
+    let best = "";
+    let bestScore = Infinity;
+    COMMON_STUDY_TOPICS.forEach((topic) => {
+      const dist = editDistance(input, topic.toLowerCase());
+      const threshold = Math.max(2, Math.floor(topic.length * 0.28));
+      if (dist <= threshold && dist < bestScore) {
+        bestScore = dist;
+        best = topic;
+      }
+    });
+    // Also allow near matches when most words align (e.g. programming fandamental).
+    if (!best) {
+      COMMON_STUDY_TOPICS.forEach((topic) => {
+        const inWords = input.split(/\s+/);
+        const topicWords = topic.toLowerCase().split(/\s+/);
+        if (inWords.length !== topicWords.length) return;
+        let total = 0;
+        for (let i = 0; i < inWords.length; i += 1) total += editDistance(inWords[i], topicWords[i]);
+        const threshold = Math.max(2, inWords.length);
+        if (total <= threshold && total < bestScore) {
+          bestScore = total;
+          best = topic;
+        }
+      });
+    }
+    return best;
+  }
 
   function localNormalizeTopic(raw) {
     let text = cleanText(raw);
@@ -360,13 +469,28 @@
     if (TOPIC_PHRASE_FIXES[lowered]) return TOPIC_PHRASE_FIXES[lowered];
     if (TOPIC_PHRASE_FIXES[compact]) return TOPIC_PHRASE_FIXES[compact];
 
+    const fuzzy = fuzzyMatchStudyTopic(text);
+    if (fuzzy) return fuzzy;
+
     const fixedWords = lowered
       .split(/\s+/)
       .map((word) => WORD_TYPO_FIXES[word.replace(/[^a-z0-9-]/g, "")] || word)
       .join(" ");
     const phraseHit = TOPIC_PHRASE_FIXES[fixedWords] || TOPIC_EXPANSIONS[fixedWords.replace(/\./g, "")];
     if (phraseHit) return phraseHit;
-    return titleCase(fixedWords);
+
+    const wordFixed = polishStudyTopic(titleCase(fixedWords));
+    const fuzzyAfter = fuzzyMatchStudyTopic(wordFixed);
+    return fuzzyAfter || wordFixed;
+  }
+
+  function hasWordOverlap(query, title) {
+    const stop = new Set(["the", "and", "for", "of", "in", "to", "a", "an", "on", "with"]);
+    const qWords = cleanText(query).toLowerCase().split(/\s+/).filter((w) => w.length > 2 && !stop.has(w));
+    const t = cleanText(title).toLowerCase();
+    if (!qWords.length) return false;
+    const hits = qWords.filter((w) => t.includes(w)).length;
+    return hits >= Math.min(2, qWords.length) || (qWords.length === 1 && hits === 1);
   }
 
   function topicsLookSame(a, b) {
@@ -837,16 +961,17 @@
     const scored = titles.map((title) => {
       const t = title.toLowerCase();
       let score = 0;
+      if (!hasWordOverlap(query, title)) score -= 80;
       if (t === q) score += 100;
       if (t.startsWith(q) || q.startsWith(t)) score += 40;
       if (t.includes(q) || q.includes(t)) score += 20;
       if (/disambiguation/i.test(title)) score -= 50;
-      // Prefer concise study titles.
       score -= Math.max(0, title.split(/\s+/).length - 4);
       return { title, score };
     });
     scored.sort((a, b) => b.score - a.score);
-    return scored[0].score > 0 ? scored[0].title : titles[0];
+    if (scored[0].score < 10) return "";
+    return scored[0].title;
   }
 
   async function resolveCanonicalTopic(rawInput) {
@@ -855,50 +980,55 @@
       return { original: "", corrected: "", changed: false };
     }
 
-    // 1) Known abbreviations / phrase fixes win immediately for study titles.
+    // 1) Local correction first (works even if Wikipedia is blocked/irrelevant).
     const known = expansionFor(original);
-    const local = localNormalizeTopic(original);
-    let corrected = known || local || original;
-    let wikiTitles = [];
+    const local = polishStudyTopic(known || localNormalizeTopic(original) || original);
+    let corrected = local;
 
-    // 2) Ask Wikipedia using the ORIGINAL text first (best for misspellings).
-    const queryOrder = [];
-    queryOrder.push(original);
-    if (local && !topicsLookSame(local, original)) queryOrder.push(local);
-    if (known && !topicsLookSame(known, original) && !topicsLookSame(known, local)) queryOrder.push(known);
+    // 2) Wikipedia spelling suggestion + relevant titles.
+    const queryOrder = [original];
+    if (!topicsLookSame(local, original)) queryOrder.push(local);
 
     for (const query of queryOrder) {
       try {
         const searched = await wikiSearchSuggest(query);
+        // Prefer Wikipedia's "did you mean" text itself, then refine.
         if (searched.suggestion) {
-          const suggestedLocal = localNormalizeTopic(searched.suggestion);
-          corrected = known && topicsLookSame(known, suggestedLocal)
-            ? known
-            : prettyStudyTitle(pickBestWikiTitle(suggestedLocal, searched.titles) || suggestedLocal, suggestedLocal);
-          wikiTitles = searched.titles;
+          let suggested = polishStudyTopic(localNormalizeTopic(searched.suggestion) || titleCase(searched.suggestion));
+          // Re-search with the suggestion so we don't keep a random wrong hit
+          // (e.g. typo "Fandamental" matching an unrelated page snippet).
+          try {
+            const refined = await wikiSearchSuggest(suggested);
+            const best = pickBestWikiTitle(suggested, refined.titles);
+            if (best && hasWordOverlap(suggested, best)) {
+              suggested = polishStudyTopic(prettyStudyTitle(best, suggested));
+            }
+          } catch (error) {
+            // Keep suggested text.
+          }
+          corrected = suggested;
           break;
         }
-        if (searched.titles.length) {
-          wikiTitles = searched.titles;
-          const best = pickBestWikiTitle(known || local || query, searched.titles);
-          if (best) {
-            corrected = known && topicsLookSame(known, best) ? known : prettyStudyTitle(best, local || known || best);
-            break;
-          }
+
+        const relevant = (searched.titles || []).filter((title) => hasWordOverlap(local || query, title));
+        const best = pickBestWikiTitle(local || query, relevant);
+        if (best) {
+          corrected = polishStudyTopic(prettyStudyTitle(best, local));
+          break;
         }
       } catch (error) {
         // Try next strategy.
       }
     }
 
-    // 3) Fallback to opensearch if search API failed.
-    if (!wikiTitles.length) {
+    // 3) OpenSearch fallback with overlap checks.
+    if (topicsLookSame(corrected, original)) {
       for (const query of queryOrder) {
         try {
-          const titles = await wikiOpenSearch(query);
-          if (titles.length) {
-            const best = pickBestWikiTitle(known || local || query, titles);
-            corrected = known && topicsLookSame(known, best) ? known : prettyStudyTitle(best, local || known || best);
+          const titles = (await wikiOpenSearch(query)).filter((title) => hasWordOverlap(local || query, title));
+          const best = pickBestWikiTitle(local || query, titles);
+          if (best) {
+            corrected = polishStudyTopic(prettyStudyTitle(best, local));
             break;
           }
         } catch (error) {
@@ -907,15 +1037,15 @@
       }
     }
 
-    // 4) Final polish from local dictionary when it clearly improved the input.
-    if (known) corrected = known;
-    else if (local && !topicsLookSame(original, local) && topicsLookSame(corrected, original)) {
-      corrected = local;
-    } else if (local && topicsLookSame(corrected, local)) {
-      corrected = local;
+    // 4) Never keep an obvious local improvement behind a failed/noisy wiki result.
+    if (local && !topicsLookSame(original, local)) {
+      if (topicsLookSame(corrected, original) || !hasWordOverlap(local, corrected)) {
+        corrected = local;
+      }
     }
+    if (known) corrected = known;
 
-    corrected = cleanText(corrected) || original;
+    corrected = polishStudyTopic(cleanText(corrected) || local || original);
 
     return {
       original,
@@ -932,23 +1062,51 @@
     return resolved;
   }
 
-  async function fetchTopicContent(topic) {
-    const resolved = await resolveCanonicalTopic(topic);
-    const lookup = resolved.corrected || cleanText(topic);
-
-    // Search-generator finds the right article even when the typed title is imperfect.
-    const extractUrl = `https://en.wikipedia.org/w/api.php?action=query&generator=search&gsrsearch=${encodeURIComponent(lookup)}&gsrlimit=1&prop=extracts&explaintext=1&exsectionformat=wiki&redirects=1&format=json&origin=*`;
+  async function fetchWikiExtractBySearch(lookup) {
+    const extractUrl = `https://en.wikipedia.org/w/api.php?action=query&generator=search&gsrsearch=${encodeURIComponent(lookup)}&gsrlimit=5&prop=extracts&explaintext=1&exsectionformat=wiki&redirects=1&format=json&origin=*`;
     const extractRes = await fetch(extractUrl);
     if (!extractRes.ok) throw new Error("Could not load study content for this topic.");
     const extractData = await extractRes.json();
-    const pages = extractData?.query?.pages || {};
-    const page = Object.values(pages)[0];
-    const extract = String(page?.extract || "").trim();
+    const pages = Object.values(extractData?.query?.pages || {});
+    if (!pages.length) return null;
+
+    const ranked = pages
+      .map((page) => {
+        const title = page?.title || "";
+        let score = hasWordOverlap(lookup, title) ? 20 : -50;
+        if (topicsLookSame(lookup, title)) score += 50;
+        if (/disambiguation/i.test(title)) score -= 40;
+        score -= Math.max(0, title.split(/\s+/).length - 5);
+        return { page, title, score, extract: String(page?.extract || "").trim() };
+      })
+      .filter((row) => row.extract && row.score >= 10)
+      .sort((a, b) => b.score - a.score);
+
+    return ranked[0] || null;
+  }
+
+  async function fetchTopicContent(topic) {
+    const resolved = await resolveCanonicalTopic(topic);
+    const lookup = resolved.corrected || cleanText(topic);
+    let match = null;
+
+    try {
+      match = await fetchWikiExtractBySearch(lookup);
+      if (!match && !topicsLookSame(lookup, resolved.original)) {
+        match = await fetchWikiExtractBySearch(resolved.original);
+        // If original typo only finds unrelated pages, ignore them.
+        if (match && !hasWordOverlap(lookup, match.title)) match = null;
+      }
+    } catch (error) {
+      match = null;
+    }
 
     const known = expansionFor(resolved.original) || expansionFor(lookup);
-    const pageTitle = prettyStudyTitle(page?.title || lookup, known || resolved.corrected || lookup);
+    const pageTitle = polishStudyTopic(
+      prettyStudyTitle(match?.title || lookup, known || resolved.corrected || lookup)
+    );
 
-    if (!extract || page?.missing !== undefined) {
+    if (!match?.extract) {
       const fallback = buildFallbackTopic(pageTitle);
       return {
         ...fallback,
@@ -961,7 +1119,7 @@
     return {
       title: pageTitle,
       source: "topic",
-      text: extract,
+      text: match.extract,
       originalTopic: resolved.original,
       corrected: !topicsLookSame(resolved.original, pageTitle),
     };
