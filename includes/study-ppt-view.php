@@ -38,7 +38,6 @@ declare(strict_types=1);
 
         <div class="study-actions">
           <button type="button" class="primary" id="studyGenerateBtn">Create presentation</button>
-          <button type="button" class="ghost" id="studyDownloadBtn" disabled>Download PowerPoint</button>
         </div>
         <p class="status" id="studyStatus" role="status">Enter a topic or paste notes, pick a template, then create your PPT.</p>
       </section>
@@ -50,6 +49,9 @@ declare(strict_types=1);
         </div>
         <div class="study-preview-stage" id="studyPreviewStage">
           <p class="study-preview-empty">Your slides will appear here before you download.</p>
+        </div>
+        <div class="study-preview-actions">
+          <button type="button" class="primary" id="studyDownloadBtn" disabled>Download PowerPoint</button>
         </div>
       </aside>
     </div>

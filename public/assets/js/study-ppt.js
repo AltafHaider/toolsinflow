@@ -10,7 +10,7 @@
   const previewStage = document.getElementById("studyPreviewStage");
   const previewMeta = document.getElementById("studyPreviewMeta");
 
-  if (!generateBtn || !templateGrid) return;
+  if (!generateBtn || !templateGrid || !downloadBtn) return;
 
   const TEMPLATES = [
     { id: "fresh-green", name: "Fresh Green", bg: "0F9F73", accent: "FFFFFF", text: "FFFFFF", muted: "D7F5EA", card: "0C7F5C", layout: "leftbar" },
