@@ -40,11 +40,6 @@ return [
             'desc' => 'Split a PDF into separate pages or extract a page range. Preview pages first.',
             'cat'  => 'pdf',
         ],
-        'study-ppt' => [
-            'name' => 'Study PPT Maker',
-            'desc' => 'Enter a topic or paste study notes to create a ChatGPT-powered study PowerPoint with accurate topic-aware slides — up to 20 slides and 30 professional designs.',
-            'cat'  => 'study',
-        ],
         'compress-image' => [
             'name' => 'Compress Image',
             'desc' => 'Reduce image file size by quality or a target KB/MB size. Keeps the full image. No objects are removed.',
@@ -134,7 +129,6 @@ return [
 
     'categories' => [
         'pdf'      => 'PDF Tools',
-        'study'    => 'Study Tools',
         'optimize' => 'Optimize',
         'convert'  => 'Convert',
         'edit'     => 'Edit',

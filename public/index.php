@@ -9,7 +9,7 @@ foreach ($tools as $id => $tool) {
     $byCat[$tool['cat']][$id] = $tool;
 }
 
-$featured = ['study-ppt', 'pdf-form-creator', 'merge-pdf', 'split-pdf', 'bg-remove', 'compress-image'];
+$featured = ['pdf-form-creator', 'merge-pdf', 'split-pdf', 'bg-remove', 'compress-image', 'images-to-pdf'];
 ?>
 <!DOCTYPE html>
 <html lang="en" data-theme="light">
