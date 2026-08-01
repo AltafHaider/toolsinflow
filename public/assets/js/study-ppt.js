@@ -261,11 +261,126 @@
     return false;
   }
 
+  const TOPIC_EXPANSIONS = {
+    ai: "Artificial Intelligence",
+    "a.i": "Artificial Intelligence",
+    "a.i.": "Artificial Intelligence",
+    ml: "Machine Learning",
+    "m.l": "Machine Learning",
+    "m.l.": "Machine Learning",
+    dbms: "Database Management System",
+    db: "Database",
+    seo: "Search Engine Optimization",
+    ppc: "Pay-Per-Click Advertising",
+    iot: "Internet of Things",
+    ui: "User Interface",
+    ux: "User Experience",
+    api: "Application Programming Interface",
+    html: "HTML",
+    css: "CSS",
+    js: "JavaScript",
+    dna: "DNA",
+    rna: "RNA",
+    ww2: "World War II",
+    wwii: "World War II",
+    "world war 2": "World War II",
+    "world war 1": "World War I",
+    wwi: "World War I",
+    gdp: "Gross Domestic Product",
+    cnc: "Computer Numerical Control",
+    nlp: "Natural Language Processing",
+    cv: "Computer Vision",
+    os: "Operating System",
+    oops: "Object-Oriented Programming",
+    oop: "Object-Oriented Programming",
+  };
+
+  const TOPIC_PHRASE_FIXES = {
+    "artifical inteligence": "Artificial Intelligence",
+    "artifical intelligence": "Artificial Intelligence",
+    "artificial inteligence": "Artificial Intelligence",
+    "artficial intelligence": "Artificial Intelligence",
+    photosyntesis: "Photosynthesis",
+    photosythesis: "Photosynthesis",
+    "photo synthesis": "Photosynthesis",
+    "maching learning": "Machine Learning",
+    "machine learnig": "Machine Learning",
+    "machin learning": "Machine Learning",
+    "digtal mrketing": "Digital Marketing",
+    "digital mrketing": "Digital Marketing",
+    "digtal marketing": "Digital Marketing",
+    "digitial marketing": "Digital Marketing",
+    "data base": "Database",
+    "data bases": "Databases",
+    "cyber securty": "Cybersecurity",
+    "cyber security": "Cybersecurity",
+    "climte change": "Climate Change",
+    "global warmingg": "Global Warming",
+  };
+
+  const WORD_TYPO_FIXES = {
+    artifical: "artificial",
+    artficial: "artificial",
+    inteligence: "intelligence",
+    intelligense: "intelligence",
+    photosyntesis: "photosynthesis",
+    photosythesis: "photosynthesis",
+    maching: "machine",
+    machin: "machine",
+    learnig: "learning",
+    learing: "learning",
+    digtal: "digital",
+    digitial: "digital",
+    mrketing: "marketing",
+    marketting: "marketing",
+    databse: "database",
+    datbase: "database",
+    managment: "management",
+    managemnt: "management",
+    enviroment: "environment",
+    goverment: "government",
+    buisness: "business",
+    buisiness: "business",
+    recieve: "receive",
+    occured: "occurred",
+    seperate: "separate",
+    definately: "definitely",
+    aquires: "acquires",
+    aquired: "acquired",
+  };
+
+  function localNormalizeTopic(raw) {
+    let text = cleanText(raw);
+    if (!text) return "";
+    const compact = text.toLowerCase().replace(/\./g, "").trim();
+    const lowered = text.toLowerCase().trim();
+
+    if (TOPIC_EXPANSIONS[compact]) return TOPIC_EXPANSIONS[compact];
+    if (TOPIC_EXPANSIONS[lowered]) return TOPIC_EXPANSIONS[lowered];
+    if (TOPIC_PHRASE_FIXES[lowered]) return TOPIC_PHRASE_FIXES[lowered];
+    if (TOPIC_PHRASE_FIXES[compact]) return TOPIC_PHRASE_FIXES[compact];
+
+    const fixedWords = lowered
+      .split(/\s+/)
+      .map((word) => WORD_TYPO_FIXES[word.replace(/[^a-z0-9-]/g, "")] || word)
+      .join(" ");
+    const phraseHit = TOPIC_PHRASE_FIXES[fixedWords] || TOPIC_EXPANSIONS[fixedWords.replace(/\./g, "")];
+    if (phraseHit) return phraseHit;
+    return titleCase(fixedWords);
+  }
+
+  function topicsLookSame(a, b) {
+    const norm = (value) => cleanText(value).toLowerCase().replace(/[^a-z0-9]+/g, "");
+    return norm(a) === norm(b);
+  }
+
   function shortTopicLabel(title) {
     const t = cleanText(title);
     const aliases = [
       [/artificial intelligence/i, "AI"],
       [/machine learning/i, "ML"],
+      [/database management system/i, "DBMS"],
+      [/search engine optimization/i, "SEO"],
       [/digital marketing/i, "Digital Marketing"],
       [/world war\s*ii|world war\s*2/i, "WWII"],
       [/world war\s*i\b|world war\s*1/i, "WWI"],
@@ -274,8 +389,40 @@
       if (re.test(t)) return label;
     }
     const words = t.split(/\s+/);
-    if (words.length <= 3) return t;
+    if (words.length <= 4) return t;
     return words.slice(0, 3).join(" ");
+  }
+
+  function professionalSubtitle(analysis) {
+    const topic = analysis.topic;
+    const map = {
+      science: `A student study guide to ${topic}`,
+      technology: `Key concepts, applications, and challenges of ${topic}`,
+      business: `Practical strategies and insights on ${topic}`,
+      history: `Causes, events, and impact of ${topic}`,
+      math: `Definitions, methods, and examples for ${topic}`,
+      health: `Essential facts and understanding of ${topic}`,
+      geography: `Location, features, and importance of ${topic}`,
+      general: `A clear study presentation on ${topic}`,
+    };
+    return map[analysis.domain] || map.general;
+  }
+
+  function chooseIntroHeading(analysis) {
+    const topic = analysis.topic;
+    if (["history"].includes(analysis.domain)) return "Introduction";
+    if (analysis.domain === "geography" && /country|continent|river|ocean|city|region/i.test(topic)) {
+      return "Introduction";
+    }
+    // Concept-style topics read better as "What is ...?"
+    if (["science", "technology", "math", "health", "business", "general"].includes(analysis.domain)) {
+      return `What is ${topic}?`;
+    }
+    return "Introduction";
+  }
+
+  function isIntroLikeSection(title) {
+    return /^(introduction|intro|overview|terminology|etymology|definition|meaning|concept|about)$/i.test(cleanText(title));
   }
 
   function scoreText(text, patterns) {
@@ -435,30 +582,39 @@
   function composeTopicOutline(analysis, sections, maxContentSlides) {
     const outline = [];
     const used = new Set();
+    const introHeading = chooseIntroHeading(analysis);
+    const introSources = [];
+
     const usable = sections
       .map((section, index) => ({ section, index }))
-      .filter(({ section }) => {
+      .filter(({ section, index }) => {
         if (isNoiseSection(section.title)) return false;
+        if (isIntroLikeSection(section.title)) {
+          introSources.push(index);
+          used.add(index);
+          return false;
+        }
         const sentences = splitSentences(section.body);
         return sentences.length >= 2 || cleanText(section.body).length > 140;
       });
 
-    // Always open with Introduction.
+    // First content slide: topic intro (no filler slides before this).
     outline.push({
       role: "intro",
-      title: "Introduction",
-      sourceIndexes: [],
-      match: /introduction|overview|definition|concept/i,
+      title: introHeading,
+      sourceIndexes: introSources,
+      match: /introduction|overview|definition|concept|terminology|meaning/i,
       useLead: true,
     });
 
     // Prefer distinctive Wikipedia / material section titles first (topic-aware renaming).
     usable.forEach(({ section, index }) => {
       if (outline.length >= maxContentSlides) return;
+      if (used.has(index)) return;
       const heading = topicAwareHeading(section.title, analysis);
       if (/^conclusion$/i.test(heading)) return;
+      if (/^(introduction|what is\b)/i.test(heading)) return;
       if (outline.some((item) => item.title.toLowerCase() === heading.toLowerCase())) return;
-      // Skip ultra-generic leftovers if we already have enough distinctive slides.
       used.add(index);
       outline.push({
         role: "section",
@@ -642,28 +798,87 @@
     return TEMPLATES.find((t) => t.id === id) || TEMPLATES[0];
   }
 
-  async function fetchTopicContent(topic) {
-    const query = encodeURIComponent(topic.trim());
-    const searchUrl = `https://en.wikipedia.org/w/api.php?action=opensearch&search=${query}&limit=1&namespace=0&format=json&origin=*`;
+  async function wikiOpenSearch(query) {
+    const searchUrl = `https://en.wikipedia.org/w/api.php?action=opensearch&search=${encodeURIComponent(query)}&limit=5&namespace=0&format=json&origin=*`;
     const searchRes = await fetch(searchUrl);
     if (!searchRes.ok) throw new Error("Could not look up this topic right now.");
     const searchData = await searchRes.json();
-    const pageTitle = searchData?.[1]?.[0] || topic.trim();
+    return (searchData?.[1] || []).filter(Boolean);
+  }
+
+  function pickBestWikiTitle(query, titles) {
+    if (!titles.length) return "";
+    const q = cleanText(query).toLowerCase();
+    const exact = titles.find((t) => t.toLowerCase() === q);
+    if (exact) return exact;
+    const starts = titles.find((t) => t.toLowerCase().startsWith(q) || q.startsWith(t.toLowerCase()));
+    if (starts) return starts;
+    const contains = titles.find((t) => t.toLowerCase().includes(q) || q.includes(t.toLowerCase()));
+    return contains || titles[0];
+  }
+
+  async function resolveCanonicalTopic(rawInput) {
+    const original = cleanText(rawInput);
+    if (!original) {
+      return { original: "", corrected: "", changed: false };
+    }
+
+    const local = localNormalizeTopic(original);
+    const queries = [];
+    if (local) queries.push(local);
+    if (original && !topicsLookSame(original, local)) queries.push(original);
+
+    let bestTitle = local || original;
+    for (const query of queries) {
+      try {
+        const titles = await wikiOpenSearch(query);
+        const chosen = pickBestWikiTitle(query, titles);
+        if (chosen) {
+          bestTitle = chosen;
+          break;
+        }
+      } catch (error) {
+        // Keep local correction if Wikipedia is unavailable.
+      }
+    }
+
+    // Prefer readable study titles for common abbreviations even if wiki is shorter.
+    if (TOPIC_EXPANSIONS[original.toLowerCase().replace(/\./g, "")] && topicsLookSame(bestTitle, local)) {
+      bestTitle = local;
+    }
+
+    return {
+      original,
+      corrected: bestTitle,
+      changed: !topicsLookSame(original, bestTitle),
+    };
+  }
+
+  async function fetchTopicContent(topic) {
+    const resolved = await resolveCanonicalTopic(topic);
+    const pageTitle = resolved.corrected || topic.trim();
     const extractUrl = `https://en.wikipedia.org/w/api.php?action=query&prop=extracts&explaintext=1&exsectionformat=wiki&redirects=1&titles=${encodeURIComponent(pageTitle)}&format=json&origin=*`;
     const extractRes = await fetch(extractUrl);
     if (!extractRes.ok) throw new Error("Could not load study content for this topic.");
     const extractData = await extractRes.json();
     const pages = extractData?.query?.pages || {};
     const page = Object.values(pages)[0];
-    // Keep section markers for structured parsing; clean later per sentence.
     const extract = String(page?.extract || "").trim();
     if (!extract || page?.missing !== undefined) {
-      return buildFallbackTopic(topic);
+      const fallback = buildFallbackTopic(pageTitle);
+      return {
+        ...fallback,
+        title: pageTitle,
+        originalTopic: resolved.original,
+        corrected: resolved.changed,
+      };
     }
     return {
-      title: titleCase(page?.title || pageTitle),
+      title: page?.title || pageTitle,
       source: "topic",
       text: extract,
+      originalTopic: resolved.original,
+      corrected: resolved.changed,
     };
   }
 
@@ -688,15 +903,19 @@
   function buildSlidesFromText(title, text, maxSlides) {
     const { lead, sections } = parseWikiSections(text);
     const analysis = analyzeTopic(title, lead, sections);
+    // Keep Wikipedia / corrected casing for the presentation title.
+    analysis.topic = cleanText(title) || analysis.topic;
+    analysis.short = shortTopicLabel(analysis.topic);
     const maxContentSlides = Math.max(4, maxSlides - 2); // title + conclusion reserved
     const outline = composeTopicOutline(analysis, sections, maxContentSlides);
     const usedSentences = new Set();
     const slides = [];
 
+    // Slide 1: corrected topic title + professional subtitle only.
     slides.push({
       type: "title",
       title: analysis.topic,
-      body: `A topic-aware study presentation on ${analysis.short} (${analysis.domain} focus).`,
+      body: professionalSubtitle(analysis),
     });
 
     outline.forEach((item) => {
@@ -1098,19 +1317,35 @@
 
     generateBtn.disabled = true;
     downloadBtn.disabled = true;
-    setStatus(material ? "Analyzing your notes and building a topic-aware outline..." : "Analyzing the topic and building a custom presentation outline...");
+    setStatus("Correcting topic and analyzing content...");
 
     try {
       let title = topic || "My Study Presentation";
       let slides;
+      let correctedNote = "";
 
       if (material.length >= 40) {
-        title = topic || titleCase(material.split(/\n|[.!?]/)[0].slice(0, 60)) || title;
+        const seed = topic || cleanText(material.split(/\n|[.!?]/)[0].slice(0, 60)) || title;
+        const resolved = await resolveCanonicalTopic(seed);
+        title = resolved.corrected || seed;
+        if (topicInput && resolved.corrected) topicInput.value = resolved.corrected;
+        if (resolved.changed) correctedNote = `Corrected to “${title}”. `;
+        setStatus(`${correctedNote}Building a topic-aware outline from your notes...`);
         slides = buildSlidesFromMaterial(title, material, maxSlides);
       } else {
         const content = await fetchTopicContent(topic || material);
         title = content.title;
+        if (topicInput && title) topicInput.value = title;
+        if (content.corrected && content.originalTopic) {
+          correctedNote = `Corrected “${content.originalTopic}” to “${title}”. `;
+        }
+        setStatus(`${correctedNote}Building a custom presentation for ${title}...`);
         slides = buildSlidesFromText(title, content.text, maxSlides);
+      }
+
+      // Ensure slide 1 is always the corrected topic title.
+      if (slides[0]?.type === "title") {
+        slides[0].title = title;
       }
 
       deck = {
@@ -1122,7 +1357,7 @@
 
       renderPreview(slides, template);
       downloadBtn.disabled = false;
-      setStatus(`${slides.length} slides ready. Download and open in PowerPoint to edit.`, "ok");
+      setStatus(`${correctedNote}${slides.length} slides ready for “${title}”. Download when ready.`, "ok");
     } catch (error) {
       deck = null;
       setStatus(error?.message || "Could not create the presentation.", "error");
