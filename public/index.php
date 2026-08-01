@@ -293,34 +293,17 @@ $featured = ['pdf-form-creator', 'merge-pdf', 'split-pdf', 'bg-remove', 'compres
         <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M20 20l-3.5-3.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
         <input type="search" id="toolsPageSearch" placeholder="Search tools by name or job..." autocomplete="off" spellcheck="false" />
       </label>
-      <p class="tools-search-empty" id="toolsSearchEmpty" hidden>No tools match that search. Try compress, PDF, blur, or PPT.</p>
+        <p class="tools-search-empty" id="toolsSearchEmpty" hidden>No tools match that search. Try compress, PDF, blur, or convert.</p>
     </div>
 
     <?php
       $imageCats = ['optimize', 'convert', 'edit', 'effects'];
       $pdfCats = ['pdf'];
-      $studyCats = ['study'];
     ?>
 
     <div class="tools-group" id="pdf">
       <h3 class="group-title">PDF tools</h3>
       <?php foreach ($pdfCats as $catId): ?>
-        <?php if (empty($byCat[$catId])) continue; ?>
-        <div class="tools-grid">
-          <?php foreach ($byCat[$catId] as $id => $tool): ?>
-            <a class="tool-card" href="<?= cz_tool_url($id) ?>">
-              <?= cz_tool_icon($id) ?>
-              <strong><?= cz_h($tool['name']) ?></strong>
-              <span><?= cz_h($tool['desc']) ?></span>
-            </a>
-          <?php endforeach; ?>
-        </div>
-      <?php endforeach; ?>
-    </div>
-
-    <div class="tools-group" id="study">
-      <h3 class="group-title">Study tools</h3>
-      <?php foreach ($studyCats as $catId): ?>
         <?php if (empty($byCat[$catId])) continue; ?>
         <div class="tools-grid">
           <?php foreach ($byCat[$catId] as $id => $tool): ?>
