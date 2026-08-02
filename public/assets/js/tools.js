@@ -1235,7 +1235,7 @@
     if (bgWorkerBroken || !window.Worker || !toolsScriptUrl) return null;
 
     try {
-      const workerUrl = new URL("bg-remove-worker.js", toolsScriptUrl).href;
+      const workerUrl = new URL("bg-remove-worker.js?v=47", toolsScriptUrl).href;
       bgRemovalWorker = new Worker(workerUrl, { type: "module" });
     } catch (error) {
       bgWorkerBroken = true;
@@ -1331,6 +1331,31 @@
     return CZImage.exportCanvas(canvas, type || "image/png", quality);
   }
 
+  async function measureForegroundOnMainThread(blob) {
+    const img = await CZImage.loadImage(blob);
+    const canvas = document.createElement("canvas");
+    canvas.width = img.naturalWidth;
+    canvas.height = img.naturalHeight;
+    const ctx = canvas.getContext("2d", { willReadFrequently: true });
+    ctx.drawImage(img, 0, 0);
+    const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+    const total = Math.max(1, canvas.width * canvas.height);
+    let soft = 0;
+    let opaque = 0;
+    for (let i = 3; i < data.length; i += 4) {
+      const alpha = data[i];
+      if (alpha >= 24) soft += 1;
+      if (alpha >= 160) opaque += 1;
+    }
+    return { ratio: soft / total, soft, opaque };
+  }
+
+  function cutoutLooksEmpty(stats) {
+    if (stats.opaque < 80 && stats.soft < 200) return true;
+    if (stats.ratio < 0.004) return true;
+    return false;
+  }
+
   async function refineEdgesOnMainThread(blob) {
     const img = await CZImage.loadImage(blob);
     const canvas = document.createElement("canvas");
@@ -1346,7 +1371,8 @@
       if ((seen += 1) % 300000 === 0) await breathe();
       const alpha = data[i];
       if (alpha === 0 || alpha === 255) continue;
-      data[i] = alpha <= 10 ? 0 : alpha >= 245 ? 255 : Math.round(((alpha - 10) * 255) / 235);
+      // Only clean tiny halo dust — keep soft subject edges (white clothes, hair, fringe).
+      data[i] = alpha <= 4 ? 0 : alpha >= 250 ? 255 : Math.round(((alpha - 4) * 255) / 246);
     }
     ctx.putImageData(image, 0, 0);
     return CZImage.exportCanvas(canvas, "image/png");
@@ -1366,12 +1392,16 @@
 
   async function cutOutOnMainThread(file, onProgress) {
     const removeBackground = await loadRemoverOnMainThread();
-    const source = await drawScaled(file, backgroundMaxSide(), "image/jpeg", 0.95);
+    const source = await drawScaled(file, backgroundMaxSide(), "image/png");
     const attempts = [
       { device: "cpu", model: "isnet_fp16" },
+      { device: "cpu", model: "isnet" },
       { device: "cpu", model: "isnet_quint8" },
     ];
     let lastError = null;
+    let best = null;
+    let bestStats = null;
+
     for (const attempt of attempts) {
       try {
         const result = await removeBackground(source, {
@@ -1381,12 +1411,24 @@
           output: { format: "image/png", type: "foreground" },
           progress: onProgress,
         });
-        return refineEdgesOnMainThread(result);
+        const stats = await measureForegroundOnMainThread(result);
+        if (!cutoutLooksEmpty(stats)) {
+          return refineEdgesOnMainThread(result);
+        }
+        if (!bestStats || stats.soft > bestStats.soft) {
+          best = result;
+          bestStats = stats;
+        }
       } catch (error) {
         lastError = error;
       }
     }
-    throw lastError || new Error("Could not remove this background.");
+
+    if (best && bestStats && bestStats.soft > 0) {
+      return refineEdgesOnMainThread(best);
+    }
+
+    throw lastError || new Error("Could not keep the subject. Try a clearer photo with a simpler background.");
   }
 
   function reportBackgroundProgress(index, key, current, total) {

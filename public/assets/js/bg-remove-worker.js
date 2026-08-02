@@ -32,9 +32,17 @@ async function loadRemover() {
   return removerPromise;
 }
 
+async function decodeBitmap(blob) {
+  try {
+    return await createImageBitmap(blob, { imageOrientation: "from-image" });
+  } catch {
+    return createImageBitmap(blob);
+  }
+}
+
 async function shrinkForModel(blob, maxSide) {
   if (!canUseCanvas() || !maxSide) return blob;
-  const bitmap = await createImageBitmap(blob);
+  const bitmap = await decodeBitmap(blob);
   const largest = Math.max(bitmap.width, bitmap.height);
   if (largest <= maxSide) {
     bitmap.close?.();
@@ -49,12 +57,42 @@ async function shrinkForModel(blob, maxSide) {
   context.imageSmoothingQuality = "high";
   context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
   bitmap.close?.();
-  return canvas.convertToBlob({ type: "image/jpeg", quality: 0.95 });
+  // Keep PNG so soft edges and light clothing survive better than a JPEG pass.
+  return canvas.convertToBlob({ type: "image/png" });
+}
+
+async function measureForeground(blob) {
+  if (!canUseCanvas()) return { ratio: 1, soft: 1, opaque: 1 };
+  const bitmap = await decodeBitmap(blob);
+  const width = bitmap.width;
+  const height = bitmap.height;
+  const total = Math.max(1, width * height);
+  const canvas = new OffscreenCanvas(width, height);
+  const context = canvas.getContext("2d", { willReadFrequently: true });
+  context.drawImage(bitmap, 0, 0);
+  bitmap.close?.();
+
+  const data = context.getImageData(0, 0, width, height).data;
+  let soft = 0;
+  let opaque = 0;
+  for (let i = 3; i < data.length; i += 4) {
+    const alpha = data[i];
+    if (alpha >= 24) soft += 1;
+    if (alpha >= 160) opaque += 1;
+  }
+  return { ratio: soft / total, soft, opaque, width, height };
+}
+
+function looksEmpty(stats) {
+  // Empty / near-empty cutouts are a known bad WebGPU result on some phones.
+  if (stats.opaque < 80 && stats.soft < 200) return true;
+  if (stats.ratio < 0.004) return true;
+  return false;
 }
 
 async function refineEdges(blob) {
   if (!canUseCanvas()) return blob;
-  const bitmap = await createImageBitmap(blob);
+  const bitmap = await decodeBitmap(blob);
   const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
   const context = canvas.getContext("2d");
   context.drawImage(bitmap, 0, 0);
@@ -65,9 +103,8 @@ async function refineEdges(blob) {
   for (let i = 3; i < data.length; i += 4) {
     const alpha = data[i];
     if (alpha === 0 || alpha === 255) continue;
-    // A gentle alpha stretch clears the faint halo around the subject. Judging pixels by
-    // brightness instead would delete white shirts, light hair and pale objects.
-    data[i] = alpha <= 10 ? 0 : alpha >= 245 ? 255 : Math.round(((alpha - 10) * 255) / 235);
+    // Only clean tiny halo dust — keep soft subject edges (white clothes, hair, fringe).
+    data[i] = alpha <= 4 ? 0 : alpha >= 250 ? 255 : Math.round(((alpha - 4) * 255) / 246);
   }
   context.putImageData(image, 0, 0);
   return canvas.convertToBlob({ type: "image/png" });
@@ -75,7 +112,7 @@ async function refineEdges(blob) {
 
 async function paintBackground(blob, color) {
   if (!canUseCanvas()) return blob;
-  const bitmap = await createImageBitmap(blob);
+  const bitmap = await decodeBitmap(blob);
   const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
   const context = canvas.getContext("2d");
   context.fillStyle = color || "#ffffff";
@@ -85,19 +122,28 @@ async function paintBackground(blob, color) {
   return canvas.convertToBlob({ type: "image/png" });
 }
 
+function buildAttempts() {
+  const attempts = [];
+  // Prefer CPU first: WebGPU on some Android devices returns a fully transparent PNG.
+  attempts.push({ device: "cpu", model: "isnet_fp16" });
+  attempts.push({ device: "cpu", model: "isnet" });
+  attempts.push({ device: "cpu", model: "isnet_quint8" });
+  if (self.navigator?.gpu) attempts.push({ device: "gpu", model: "isnet_fp16" });
+  return attempts;
+}
+
 async function cutOut(blob, id, maxSide) {
   const removeBackground = await loadRemover();
   const source = await shrinkForModel(blob, maxSide);
-
-  const attempts = [];
-  if (self.navigator?.gpu) attempts.push({ device: "gpu", model: "isnet_fp16" });
-  attempts.push({ device: "cpu", model: "isnet_fp16" });
-  attempts.push({ device: "cpu", model: "isnet_quint8" });
+  const attempts = buildAttempts();
 
   let lastError = null;
+  let best = null;
+  let bestStats = null;
+
   for (const attempt of attempts) {
     try {
-      return await removeBackground(source, {
+      const result = await removeBackground(source, {
         publicPath: MODEL_DATA_PATH,
         device: attempt.device,
         model: attempt.model,
@@ -106,11 +152,26 @@ async function cutOut(blob, id, maxSide) {
           self.postMessage({ type: "progress", id, key, current, total });
         },
       });
+
+      const stats = await measureForeground(result);
+      if (!looksEmpty(stats)) {
+        return refineEdges(result);
+      }
+
+      if (!bestStats || stats.soft > bestStats.soft) {
+        best = result;
+        bestStats = stats;
+      }
     } catch (error) {
       lastError = error;
     }
   }
-  throw lastError || new Error("Could not remove this background.");
+
+  if (best && bestStats && bestStats.soft > 0) {
+    return refineEdges(best);
+  }
+
+  throw lastError || new Error("Could not keep the subject. Try a clearer photo with a simpler background.");
 }
 
 self.addEventListener("message", async (event) => {
@@ -120,7 +181,7 @@ self.addEventListener("message", async (event) => {
     const output =
       type === "compose"
         ? await paintBackground(input, color)
-        : await refineEdges(await cutOut(input, id, maxSide));
+        : await cutOut(input, id, maxSide);
 
     const resultBuffer = await output.arrayBuffer();
     self.postMessage({ type: "result", id, buffer: resultBuffer, mime: output.type || "image/png" }, [

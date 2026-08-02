@@ -133,7 +133,7 @@ $isPdfUpload = $needsPdfToWord || $needsMergePdf || $needsSplitPdf;
   <script src="<?= $assetBase ?>/js/pdf-form-editor.js?v=13"></script>
   <?php elseif ($tool): ?>
   <script src="<?= $assetBase ?>/js/image-core.js?v=21"></script>
-  <script src="<?= $assetBase ?>/js/tools.js?v=46"></script>
+  <script src="<?= $assetBase ?>/js/tools.js?v=47"></script>
   <?php endif; ?>
 </body>
 </html>
