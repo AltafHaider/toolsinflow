@@ -100,6 +100,7 @@ function cz_tool_icon(string $id): string
         'word-to-pdf' => '<path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4M9 12h6M9 15h5"/><path d="M8.5 11l1.5 5 1.5-3 1.5 3 1.5-5"/>',
         'merge-pdf' => '<path d="M4 4h8l3 3v6H4z"/><path d="M9 10h8l3 3v6H9z"/><path d="M12 7v3M13.5 14h3M13.5 17h2"/>',
         'split-pdf' => '<path d="M6 3h7l3 3v7H6z"/><path d="M13 3v3h3M4 14h7l3 3v4H4z"/><path d="M11 14v3h3M14.5 10.5l4 0M16.5 8.5v4"/>',
+        'compress-pdf' => '<path d="M7 3h8l4 4v14H7z"/><path d="M15 3v4h4M9 12h6M9 15h4"/><path d="M10 18h4l-2 2-2-2zM10 10h4L12 8l-2 2z"/>',
         'compress-image' => '<path d="M8 3h8v6H8zM8 15h8v6H8zM5 10h14v4H5z"/>',
         'resize-image' => '<path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/><rect x="8" y="8" width="8" height="8" rx="1"/>',
         'bg-remove' => '<path d="M4 19l5-6.5a2.2 2.2 0 013.4 0L18 19"/><circle cx="9" cy="8" r="2.2"/><path d="M16.5 6.5l4 4M20.5 6.5l-4 4"/>',

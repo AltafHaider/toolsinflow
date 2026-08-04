@@ -18,16 +18,17 @@ if ($id === '' || !isset($tools[$id])) {
     $desc = $tool['desc'] . ' Free private browser tool at toolsinflow.com. No signup required.';
 }
 
-$needsPdfLib = in_array($id, ['images-to-pdf', 'merge-pdf', 'split-pdf'], true);
-$needsPdfJs = in_array($id, ['pdf-to-word', 'merge-pdf', 'split-pdf', 'pdf-form-creator'], true);
+$needsPdfLib = in_array($id, ['images-to-pdf', 'merge-pdf', 'split-pdf', 'compress-pdf'], true);
+$needsPdfJs = in_array($id, ['pdf-to-word', 'merge-pdf', 'split-pdf', 'compress-pdf', 'pdf-form-creator'], true);
 $needsPdfToWord = $id === 'pdf-to-word';
 $needsWordToPdf = $id === 'word-to-pdf';
 $needsMergePdf = $id === 'merge-pdf';
 $needsSplitPdf = $id === 'split-pdf';
+$needsCompressPdf = $id === 'compress-pdf';
 $needsPdfForms = $id === 'pdf-form-creator';
 $isDocExchange = $needsPdfToWord || $needsWordToPdf;
-$isSinglePdf = $needsPdfToWord || $needsSplitPdf;
-$isPdfUpload = $needsPdfToWord || $needsMergePdf || $needsSplitPdf;
+$isSinglePdf = $needsPdfToWord || $needsSplitPdf || $needsCompressPdf;
+$isPdfUpload = $needsPdfToWord || $needsMergePdf || $needsSplitPdf || $needsCompressPdf;
 ?>
 <!DOCTYPE html>
 <html lang="en" data-theme="light">
@@ -77,9 +78,7 @@ $isPdfUpload = $needsPdfToWord || $needsMergePdf || $needsSplitPdf;
           <strong><?php
             if ($needsMergePdf) {
                 echo 'Drop PDF files here or click to choose';
-            } elseif ($needsSplitPdf) {
-                echo 'Drop a PDF here or click to choose';
-            } elseif ($needsPdfToWord) {
+            } elseif ($needsCompressPdf || $needsSplitPdf || $needsPdfToWord) {
                 echo 'Drop a PDF here or click to choose';
             } elseif ($needsWordToPdf) {
                 echo 'Drop a Word file here or click to choose';
@@ -90,6 +89,8 @@ $isPdfUpload = $needsPdfToWord || $needsMergePdf || $needsSplitPdf;
           <span id="dropHint"><?php
             if ($needsMergePdf) {
                 echo 'Select two or more PDF files';
+            } elseif ($needsCompressPdf) {
+                echo 'One PDF file to compress';
             } elseif ($needsSplitPdf) {
                 echo 'One PDF file to split or extract pages';
             } elseif ($needsPdfToWord) {
@@ -133,7 +134,7 @@ $isPdfUpload = $needsPdfToWord || $needsMergePdf || $needsSplitPdf;
   <script src="<?= $assetBase ?>/js/pdf-form-editor.js?v=13"></script>
   <?php elseif ($tool): ?>
   <script src="<?= $assetBase ?>/js/image-core.js?v=21"></script>
-  <script src="<?= $assetBase ?>/js/tools.js?v=47"></script>
+  <script src="<?= $assetBase ?>/js/tools.js?v=48"></script>
   <?php endif; ?>
 </body>
 </html>

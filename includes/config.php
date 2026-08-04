@@ -40,6 +40,11 @@ return [
             'desc' => 'Split a PDF into separate pages or extract a page range. Preview pages first.',
             'cat'  => 'pdf',
         ],
+        'compress-pdf' => [
+            'name' => 'Compress PDF',
+            'desc' => 'Reduce PDF file size by recompressing pages. Preview first, then download.',
+            'cat'  => 'pdf',
+        ],
         'compress-image' => [
             'name' => 'Compress Image',
             'desc' => 'Reduce image file size by quality or a target KB/MB size. Keeps the full image. No objects are removed.',

@@ -62,6 +62,7 @@
       "word-to-pdf": "Download PDF",
       "merge-pdf": "Download PDF",
       "split-pdf": "Download PDFs",
+      "compress-pdf": "Download PDF",
     };
     if (tool === "split-pdf") {
       const mode = document.getElementById("splitMode")?.value || "each";
@@ -75,7 +76,7 @@
   }
 
   function isSinglePdfTool() {
-    return tool === "pdf-to-word" || tool === "split-pdf";
+    return tool === "pdf-to-word" || tool === "split-pdf" || tool === "compress-pdf";
   }
 
   function ensurePdfJs() {
@@ -223,7 +224,7 @@
   }
 
   function acceptAttr() {
-    if (tool === "pdf-to-word" || tool === "merge-pdf" || tool === "split-pdf") {
+    if (tool === "pdf-to-word" || tool === "merge-pdf" || tool === "split-pdf" || tool === "compress-pdf") {
       return "application/pdf,.pdf";
     }
     if (tool === "word-to-pdf") {
@@ -269,6 +270,8 @@
       ? "Two or more PDF files. Order follows the list below."
       : tool === "split-pdf"
       ? "One PDF file. Preview pages, then download the split files."
+      : tool === "compress-pdf"
+      ? "One PDF file. Choose compression strength, then preview."
       : tool === "word-to-pdf"
       ? "One Word .docx file. Preview the PDF before download."
       : tool === "blur-faces"
@@ -345,6 +348,20 @@
       scheduleAutoRun(200);
       return;
     }
+    if (tool === "compress-pdf") {
+      if (!/\.pdf$/i.test(arr[0].name || "") && !(arr[0].type || "").includes("pdf")) {
+        setStatus("Please choose a PDF file.", "error");
+        return;
+      }
+      files = [arr[0]];
+      cutouts = [];
+      manual = { source: null, mask: null, display: null, painting: false, scale: 1 };
+      clearPreview();
+      renderFiles();
+      setStatus("Compressing PDF...");
+      scheduleAutoRun(200);
+      return;
+    }
     if (tool === "word-to-pdf") {
       const name = arr[0].name || "";
       if (/\.doc$/i.test(name) && !/\.docx$/i.test(name)) {
@@ -416,6 +433,9 @@
             if (files.length >= 2) scheduleAutoRun(200);
           } else if (tool === "split-pdf") {
             setStatus("Updating split preview...");
+            scheduleAutoRun(200);
+          } else if (tool === "compress-pdf") {
+            setStatus("Updating compressed preview...");
             scheduleAutoRun(200);
           } else if (tool === "bg-remove") {
             showOriginalBgPreview();
@@ -553,6 +573,16 @@
           <input type="text" id="splitRange" placeholder="1-3,5" />
         </label>
         <p class="control-hint">Preview shows pages of your PDF. Download creates separate files or one extracted PDF.</p>`;
+    } else if (tool === "compress-pdf") {
+      controls.innerHTML = `
+        <label>Compression
+          <select id="pdfCompressLevel">
+            <option value="high">High quality (lighter shrink)</option>
+            <option value="balanced" selected>Balanced</option>
+            <option value="strong">Strong (smaller file)</option>
+          </select>
+        </label>
+        <p class="control-hint">Pages are recompressed as images. Text may become non-selectable. Preview shows size savings before download.</p>`;
     } else {
       controls.innerHTML = "";
     }
@@ -788,6 +818,9 @@
           break;
         case "split-pdf":
           await splitPdf();
+          break;
+        case "compress-pdf":
+          await compressPdf();
           break;
         case "pdf-to-word":
           await pdfToWord();
@@ -1676,6 +1709,86 @@
       </div>`;
   }
 
+
+  function pdfCompressSettings() {
+    const level = document.getElementById("pdfCompressLevel")?.value || "balanced";
+    if (level === "high") return { scale: 1.5, quality: 0.82 };
+    if (level === "strong") return { scale: 1.0, quality: 0.55 };
+    return { scale: 1.25, quality: 0.72 };
+  }
+
+  async function compressPdf() {
+    if (typeof PDFLib === "undefined") throw new Error("PDF library missing. Refresh the page.");
+    ensurePdfJs();
+    const file = files[0];
+    if (!file) throw new Error("Choose a PDF file first.");
+
+    const originalBytes = new Uint8Array(await file.arrayBuffer());
+    const originalSize = originalBytes.byteLength;
+    const { scale, quality } = pdfCompressSettings();
+    const base = CZImage.baseName(file);
+
+    const pdf = await pdfjsLib.getDocument({ data: originalBytes }).promise;
+    const totalPages = pdf.numPages;
+    if (!totalPages) throw new Error("This PDF has no pages.");
+
+    const { PDFDocument } = PDFLib;
+    const out = await PDFDocument.create();
+
+    for (let pageNumber = 1; pageNumber <= totalPages; pageNumber += 1) {
+      setStatus(`Compressing page ${pageNumber} of ${totalPages}...`);
+      const page = await pdf.getPage(pageNumber);
+      const viewport = page.getViewport({ scale });
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.max(1, Math.round(viewport.width));
+      canvas.height = Math.max(1, Math.round(viewport.height));
+      await page.render({ canvasContext: canvas.getContext("2d"), viewport }).promise;
+
+      const jpegBlob = await new Promise((resolve, reject) => {
+        canvas.toBlob(
+          (blob) => (blob ? resolve(blob) : reject(new Error("Could not encode page image."))),
+          "image/jpeg",
+          quality
+        );
+      });
+      const jpegBytes = new Uint8Array(await jpegBlob.arrayBuffer());
+      const embedded = await out.embedJpg(jpegBytes);
+      const pdfPage = out.addPage([embedded.width, embedded.height]);
+      pdfPage.drawImage(embedded, { x: 0, y: 0, width: embedded.width, height: embedded.height });
+    }
+
+    const compressedBytes = await out.save();
+    const compressedSize = compressedBytes.byteLength;
+    const outName = `${base}-compressed.pdf`;
+    queueFile(compressedBytes, outName, "application/pdf");
+
+    setStatus("Building page preview...");
+    let gallery = "";
+    try {
+      const preview = await renderPdfThumbnails(compressedBytes, 12, 0.8);
+      gallery = buildThumbGalleryHtml(preview.thumbs, preview.total, "Page");
+    } catch (err) {
+      gallery = `<p class="docx-preview-note">Page images could not be rendered, but your compressed PDF is ready to download.</p>`;
+    }
+
+    const savedPct =
+      originalSize > 0 && compressedSize < originalSize
+        ? Math.round((1 - compressedSize / originalSize) * 100)
+        : 0;
+    const sizeNote =
+      compressedSize <= originalSize
+        ? `${CZImage.formatBytes(originalSize)} ? ${CZImage.formatBytes(compressedSize)}${savedPct ? ` (${savedPct}% smaller)` : ""}`
+        : `${CZImage.formatBytes(originalSize)} ? ${CZImage.formatBytes(compressedSize)} (could not shrink further with this setting)`;
+
+    previewHtml = `<div class="word-pdf-preview">
+        <div class="preview-file-card preview-file-card--pdf">
+          <strong>Compressed PDF ready</strong>
+          <span>${escapeHtml(outName)}</span>
+          <em>${sizeNote} · ${totalPages} page${totalPages === 1 ? "" : "s"}</em>
+        </div>
+        ${gallery}
+      </div>`;
+  }
   async function imagesToPdf() {
     if (typeof PDFLib === "undefined") throw new Error("PDF library missing. Refresh the page.");
     const { PDFDocument } = PDFLib;
