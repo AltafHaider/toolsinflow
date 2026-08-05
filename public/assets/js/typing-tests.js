@@ -617,7 +617,7 @@
     } else if (isMixed) {
       statProgress.textContent = String(state.mcqCorrect + state.mcqWrong + state.mcqSkipped);
     } else {
-      statProgress.textContent = String(state.typed.length);
+      statProgress.textContent = String(state.correct);
     }
   }
 
@@ -672,19 +672,11 @@
     if (value.length > 0) beginTypingTimer();
 
     state.typed = value;
-    let correct = 0;
-    let incorrect = 0;
-    const typedChars = Array.from(value);
-    const targetChars = Array.from(state.target);
-    const limit = Math.min(typedChars.length, targetChars.length);
-    for (let i = 0; i < limit; i += 1) {
-      if (charsMatch(typedChars[i], targetChars[i])) correct += 1;
-      else incorrect += 1;
-    }
-    state.correct = correct;
-    state.incorrect = incorrect;
+    syncTypingScore();
     renderPassage();
     updateLiveStats();
+    const typedChars = Array.from(value);
+    const targetChars = Array.from(state.target);
     if (typedChars.length >= targetChars.length - 80) {
       const extra = usingCustomParagraph()
         ? normalizeTypingText(CUSTOM_PARAGRAPHS[state.paragraphIndex].text)
@@ -692,6 +684,21 @@
       state.target += " " + extra;
       renderPassage();
     }
+  }
+
+  function syncTypingScore() {
+    let correct = 0;
+    let incorrect = 0;
+    const typedChars = Array.from(state.typed);
+    const targetChars = Array.from(state.target);
+    const limit = Math.min(typedChars.length, targetChars.length);
+    for (let i = 0; i < limit; i += 1) {
+      if (charsMatch(typedChars[i], targetChars[i])) correct += 1;
+      else incorrect += 1;
+    }
+    // Complete correct chars only — both Correct and Typed use this finished match count.
+    state.correct = correct;
+    state.incorrect = incorrect;
   }
 
   function showEntry() {
@@ -862,6 +869,7 @@
       return;
     }
 
+    syncTypingScore();
     const wpm = Math.round(state.correct / 5 / minutes);
 
     let title = "Test complete";
@@ -870,12 +878,14 @@
     else if (wpm >= 35) title = "Solid speed";
     resultsTitle.textContent = title;
 
+    // Correct chars and Typed both show complete correctly typed characters.
+    const completeChars = state.correct;
     const cards = [
       { label: "WPM", value: String(wpm) },
       { label: "Accuracy", value: `${accuracy}%` },
-      { label: "Correct chars", value: String(state.correct) },
+      { label: "Correct chars", value: String(completeChars) },
       { label: "Errors", value: String(state.incorrect) },
-      { label: "Typed", value: String(state.typed.length) },
+      { label: "Typed", value: String(completeChars) },
       { label: "Duration", value: formatTime(state.durationSec) },
     ];
 
