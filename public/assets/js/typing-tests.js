@@ -281,20 +281,39 @@
       .replaceAll('"', "&quot;");
   }
 
+  function normalizeTypingText(value) {
+    return String(value || "")
+      .normalize("NFC")
+      .replace(/\r\n?/g, "\n")
+      .replace(/[\u00A0\u202F\u2007\u2009\u200A\u2008]/g, " ")
+      .replace(/[\u2018\u2019\u201A\u2032]/g, "'")
+      .replace(/[\u201C\u201D\u201E\u2033]/g, '"')
+      .replace(/\u2026/g, "...")
+      .replace(/[\u2013\u2014]/g, "-")
+      .replace(/\t/g, " ");
+  }
+
+  function charsMatch(a, b) {
+    if (a === b) return true;
+    // Treat any whitespace as a regular space so Enter/nbsp mismatches do not go red.
+    if (/\s/.test(a) && /\s/.test(b)) return true;
+    return normalizeTypingText(a) === normalizeTypingText(b);
+  }
+
   function usingCustomParagraph() {
     return isTyping && state.textMode === "custom";
   }
 
   function buildPassage() {
     if (usingCustomParagraph()) {
-      const base = CUSTOM_PARAGRAPHS[state.paragraphIndex]?.text || CUSTOM_PARAGRAPHS[0].text;
+      const base = normalizeTypingText(CUSTOM_PARAGRAPHS[state.paragraphIndex]?.text || CUSTOM_PARAGRAPHS[0].text);
       let text = base;
       while (text.length < 1800) text += " " + base;
       return text;
     }
-    const pool = shuffle(PASSAGES);
+    const pool = shuffle(PASSAGES.map(normalizeTypingText));
     let text = pool.join(" ");
-    while (text.length < 2200) text += " " + pick(PASSAGES);
+    while (text.length < 2200) text += " " + pick(pool);
     return text;
   }
 
@@ -505,36 +524,54 @@
   }
 
   function renderPassage() {
-    const chars = state.target.split("");
-    const typed = state.typed;
+    const chars = Array.from(state.target);
+    const typed = Array.from(state.typed);
     let html = "";
     for (let i = 0; i < chars.length; i += 1) {
       let cls = "ch";
-      if (i < typed.length) cls += typed[i] === chars[i] ? " is-ok" : " is-bad";
+      if (i < typed.length) cls += charsMatch(typed[i], chars[i]) ? " is-ok" : " is-bad";
       else if (i === typed.length) cls += " is-current";
-      html += `<span class="${cls}">${chars[i] === " " ? "&nbsp;" : escapeHtml(chars[i])}</span>`;
+      const ch = chars[i];
+      html += `<span class="${cls}">${/\s/.test(ch) ? "&nbsp;" : escapeHtml(ch)}</span>`;
     }
     textEl.innerHTML = html;
-    textEl.querySelector(".is-current")?.scrollIntoView({ block: "center", inline: "nearest" });
+    const current = textEl.querySelector(".is-current");
+    if (current && textEl.scrollHeight > textEl.clientHeight) {
+      const top = current.offsetTop - textEl.clientHeight / 2;
+      textEl.scrollTop = Math.max(0, top);
+    }
   }
 
-  function scoreTyped(value) {
+  function scoreTyped(rawValue) {
+    const value = normalizeTypingText(rawValue);
+    // Keep the invisible field aligned with normalized text (avoids sticky smart quotes).
+    if (inputEl.value !== value) {
+      const pos = inputEl.selectionStart;
+      inputEl.value = value;
+      try {
+        inputEl.setSelectionRange(pos, pos);
+      } catch (e) {}
+    }
+
     state.typed = value;
     let correct = 0;
     let incorrect = 0;
-    const limit = Math.min(value.length, state.target.length);
+    const typedChars = Array.from(value);
+    const targetChars = Array.from(state.target);
+    const limit = Math.min(typedChars.length, targetChars.length);
     for (let i = 0; i < limit; i += 1) {
-      if (value[i] === state.target[i]) correct += 1;
+      if (charsMatch(typedChars[i], targetChars[i])) correct += 1;
       else incorrect += 1;
     }
     state.correct = correct;
     state.incorrect = incorrect;
     renderPassage();
     updateLiveStats();
-    if (value.length >= state.target.length) {
-      state.target += " " + (usingCustomParagraph()
-        ? CUSTOM_PARAGRAPHS[state.paragraphIndex].text
-        : pick(PASSAGES));
+    if (typedChars.length >= targetChars.length) {
+      const extra = usingCustomParagraph()
+        ? normalizeTypingText(CUSTOM_PARAGRAPHS[state.paragraphIndex].text)
+        : pick(PASSAGES.map(normalizeTypingText));
+      state.target += " " + extra;
       renderPassage();
     }
   }
@@ -798,6 +835,17 @@
   inputEl.addEventListener("input", () => {
     if (!state.running || isEntry || isMixed) return;
     scoreTyped(inputEl.value);
+  });
+
+  inputEl.addEventListener("compositionend", () => {
+    if (!state.running || isEntry || isMixed) return;
+    scoreTyped(inputEl.value);
+  });
+
+  // Keep focus on the typing field when the passage area is tapped.
+  textWrap?.addEventListener("click", () => {
+    if (!state.running || isEntry || isMixed) return;
+    inputEl.focus();
   });
 
   inputEl.addEventListener("keydown", (event) => {
