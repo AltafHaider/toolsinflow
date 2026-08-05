@@ -4127,3 +4127,99 @@ html.pdf-plain-cursor textarea {
   border-color: var(--accent);
   color: var(--accent-ink);
 }
+
+/* Data entry result (CPM / WPM layout) */
+.entry-result-heading {
+  text-align: center;
+  font-weight: 500 !important;
+  font-size: clamp(1.5rem, 3vw, 2rem) !important;
+  margin-bottom: 1.1rem !important;
+}
+
+.entry-result-layout {
+  display: block;
+  max-width: 520px;
+  margin: 0 auto 1.2rem;
+}
+
+.entry-result-box {
+  border: 1px solid #c8c8c8;
+  background: #fff;
+  color: #222;
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.entry-result-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.85rem 1rem;
+  border-bottom: 1px solid #d8d8d8;
+  font-size: 1rem;
+}
+
+.entry-result-row:last-child {
+  border-bottom: 0;
+}
+
+.entry-result-row span {
+  color: #333;
+}
+
+.entry-result-row strong {
+  font-weight: 700;
+  color: #111;
+}
+
+.entry-result-note {
+  margin: 1rem 0 1.25rem;
+  text-align: center;
+  color: #555;
+  font-size: 0.95rem;
+  line-height: 1.45;
+}
+
+.entry-result-conclusion-title {
+  margin: 0 0 0.45rem;
+  font-size: 1.15rem;
+  color: var(--ink);
+}
+
+.entry-result-conclusion {
+  margin: 0 0 1.2rem;
+  color: var(--ink);
+  line-height: 1.5;
+}
+
+.entry-result-extra {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.55rem;
+}
+
+@media (max-width: 560px) {
+  .entry-result-extra {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+[data-theme="dark"] .entry-result-box {
+  background: var(--surface-2);
+  border-color: var(--border);
+  color: var(--ink);
+}
+
+[data-theme="dark"] .entry-result-row {
+  border-bottom-color: var(--border);
+}
+
+[data-theme="dark"] .entry-result-row span,
+[data-theme="dark"] .entry-result-row strong {
+  color: var(--ink);
+}
+
+[data-theme="dark"] .entry-result-note {
+  color: var(--muted);
+}

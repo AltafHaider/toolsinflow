@@ -237,6 +237,7 @@
     entryCorrect: 0,
     entryWrong: 0,
     entrySkipped: 0,
+    entryChars: 0,
     questions: [],
     qIndex: 0,
     selectedOption: null,
@@ -617,10 +618,12 @@
     if (!state.running) return;
     const item = state.entries[state.entryIndex];
     if (!item) return;
-    if (skipped) state.entrySkipped += 1;
-    else {
+    if (skipped) {
+      state.entrySkipped += 1;
+    } else {
       const typed = normalizeEntry(entryInput.value);
       const expected = normalizeEntry(item.value);
+      state.entryChars += typed.length;
       if (typed && typed === expected) state.entryCorrect += 1;
       else state.entryWrong += 1;
     }
@@ -706,29 +709,39 @@
     if (isEntry) {
       const attempted = state.entryCorrect + state.entryWrong + state.entrySkipped;
       const graded = state.entryCorrect + state.entryWrong;
-      const epm = Math.round(state.entryCorrect / minutes);
+      const minutes = Math.max(state.durationSec / 60, elapsedMinutes());
+      const cpm = Math.round(state.entryChars / minutes);
+      const wpm = Math.round(cpm / 5);
+      const accLabel = graded ? `${accuracy}%` : "0%";
 
-      if (attempted === 0) resultsTitle.textContent = "Time is up — no entries attempted";
-      else if (accuracy >= 95 && graded >= 5) resultsTitle.textContent = "Excellent data entry score";
-      else if (accuracy >= 85) resultsTitle.textContent = "Strong accuracy";
-      else if (graded > 0) resultsTitle.textContent = "Data entry complete";
-      else resultsTitle.textContent = "Time is up";
+      resultsTitle.textContent = "Data Entry Test";
+      resultsTitle.classList.add("entry-result-heading");
+      document.querySelector(".typing-results .typing-mode-tag")?.setAttribute("hidden", "");
 
-      const cards = [
-        { label: "Attempted", value: String(attempted) },
-        { label: "Correct", value: String(state.entryCorrect) },
-        { label: "Wrong", value: String(state.entryWrong) },
-        { label: "Skipped", value: String(state.entrySkipped) },
-        { label: "Accuracy", value: graded ? `${accuracy}%` : "—" },
-        { label: "Correct / min", value: String(epm) },
-        { label: "Time limit", value: formatTime(state.durationSec) },
-      ];
-      resultGrid.innerHTML = cards
-        .map((card) => `<div class="typing-result-card"><strong>${escapeHtml(card.value)}</strong><span>${escapeHtml(card.label)}</span></div>`)
-        .join("");
+      resultGrid.className = "entry-result-layout";
+      resultGrid.innerHTML = `
+        <div class="entry-result-box">
+          <div class="entry-result-row"><span>Characters per minute (CPM)</span><strong>${cpm}</strong></div>
+          <div class="entry-result-row"><span>Words per minute (WPM)</span><strong>${wpm}</strong></div>
+          <div class="entry-result-row"><span>Accuracy</span><strong>${escapeHtml(accLabel)}</strong></div>
+        </div>
+        <p class="entry-result-note"><em>CPM also includes spaces and punctuation. WPM is always your CPM divided by 5, this is an international standard.</em></p>
+        <h3 class="entry-result-conclusion-title">Conclusion</h3>
+        <p class="entry-result-conclusion">Your typing speed was measured as <strong>${cpm} CPM</strong> and your accuracy was <strong>${escapeHtml(accLabel)}</strong>.</p>
+        <div class="entry-result-extra">
+          <div class="typing-result-card"><strong>${attempted}</strong><span>Attempted</span></div>
+          <div class="typing-result-card"><strong>${state.entryCorrect}</strong><span>Correct</span></div>
+          <div class="typing-result-card"><strong>${state.entryWrong}</strong><span>Wrong</span></div>
+          <div class="typing-result-card"><strong>${state.entrySkipped}</strong><span>Skipped</span></div>
+        </div>
+      `;
       show("results");
       return;
     }
+
+    resultsTitle.classList.remove("entry-result-heading");
+    document.querySelector(".typing-results .typing-mode-tag")?.removeAttribute("hidden");
+    resultGrid.className = "typing-result-grid";
 
     if (isMixed) {
       const totalQ = state.questions.length;
@@ -818,6 +831,7 @@
     state.entryCorrect = 0;
     state.entryWrong = 0;
     state.entrySkipped = 0;
+    state.entryChars = 0;
     state.qIndex = 0;
     state.selectedOption = null;
     state.mcqCorrect = 0;
