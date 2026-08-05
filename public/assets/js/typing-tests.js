@@ -80,7 +80,7 @@
 
   const MIXED_CATEGORIES = ["Grammar", "Mathematics", "Images", "Critical Thinking"];
 
-  // LiveChat-style: random common words (not full sentences) for Random mode.
+  // Random mode: common English words (not full sentences).
   const COMMON_WORDS = [
     "the", "be", "to", "of", "and", "a", "in", "that", "have", "I", "it", "for", "not", "on", "with", "he", "as", "you", "do", "at",
     "this", "but", "his", "by", "from", "they", "we", "say", "her", "she", "or", "an", "will", "my", "one", "all", "would", "there", "their", "what",
@@ -394,7 +394,7 @@
       while (text.length < 6000) text += " " + base;
       return text;
     }
-    // Random mode: LiveChat-style stream of common words (not full sentences).
+    // Random mode: stream of common words (not full sentences).
     return buildWordStream(6000);
   }
 
@@ -575,7 +575,7 @@
       statProgressLabel.textContent = "Answered";
     } else {
       setupTitle.textContent = "Typing speed test";
-      setupCopy.textContent = "Random mode uses common English words (like LiveChat). Custom mode uses your chosen paragraph. Timer starts on the first key.";
+      setupCopy.textContent = "Random mode uses common English words. Custom mode uses your chosen paragraph. Timer starts on the first key.";
       startBtn.textContent = "Start typing test";
       statWpmLabel.textContent = "WPM";
       statAccuracyLabel.textContent = "Accuracy";
@@ -908,7 +908,7 @@
     syncTypingScore();
     const totalTyped = state.typed.length;
     const typingMinutes = Math.max(state.durationSec / 60, elapsedMinutes());
-    // LiveChat-style: CPM includes mistakes; WPM = corrected CPM / 5.
+    // CPM includes mistakes; WPM = corrected CPM / 5 (international standard).
     const cpm = Math.round(totalTyped / typingMinutes);
     const correctedCpm = Math.round(state.correct / typingMinutes);
     const wpm = Math.round(correctedCpm / 5);
