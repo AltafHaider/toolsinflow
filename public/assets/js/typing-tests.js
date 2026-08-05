@@ -66,11 +66,11 @@
   ];
 
   const MIXED_DURATIONS = [
-    { sec: 300, label: "5 min" },
-    { sec: 600, label: "10 min" },
-    { sec: 900, label: "15 min" },
-    { sec: 1200, label: "20 min" },
-    { sec: 1800, label: "30 min" },
+    { sec: 300, label: "5 min", questions: 10 },
+    { sec: 600, label: "10 min", questions: 20 },
+    { sec: 900, label: "15 min", questions: 30 },
+    { sec: 1200, label: "20 min", questions: 40 },
+    { sec: 1800, label: "30 min", questions: 60 },
   ];
 
   // Random-mode passages (different from the custom paragraph list).
@@ -366,14 +366,29 @@
       const btn = document.createElement("button");
       btn.type = "button";
       btn.className = "typing-duration" + (item.sec === state.durationSec ? " is-active" : "");
-      btn.textContent = item.label;
+      btn.textContent = item.questions ? `${item.label} · ${item.questions} Q` : item.label;
       btn.addEventListener("click", () => {
         state.durationSec = item.sec;
         durationsEl.querySelectorAll(".typing-duration").forEach((el) => el.classList.remove("is-active"));
         btn.classList.add("is-active");
+        if (isMixed) updateMixedSetupHint();
       });
       durationsEl.appendChild(btn);
     });
+  }
+
+  function mixedQuestionCount() {
+    const match = MIXED_DURATIONS.find((item) => item.sec === state.durationSec);
+    if (match?.questions) return match.questions;
+    return Math.max(10, Math.round((state.durationSec / 60) * 2));
+  }
+
+  function updateMixedSetupHint() {
+    if (!isMixed) return;
+    const count = mixedQuestionCount();
+    const mins = Math.round(state.durationSec / 60);
+    setupCopy.textContent = `${mins} minutes = ${count} questions (English, Math, image/pattern, and critical thinking).`;
+    startBtn.textContent = `Start ${count}-question test`;
   }
 
   function setTextMode(mode) {
@@ -435,8 +450,7 @@
       statProgressLabel.textContent = "Correct";
     } else if (isMixed) {
       setupTitle.textContent = "Critical thinking test";
-      setupCopy.textContent = "Answer MCQs across English, Mathematics, image/pattern, and critical thinking.";
-      startBtn.textContent = "Start critical thinking test";
+      updateMixedSetupHint();
       statWpmLabel.textContent = "Score";
       statAccuracyLabel.textContent = "Accuracy";
       statProgressLabel.textContent = "Answered";
@@ -696,12 +710,27 @@
     show("results");
   }
 
+  function takeCategoryQuestions(cat, count) {
+    const pool = shuffle(MCQ_BANK.filter((q) => q.cat === cat));
+    if (!pool.length || count <= 0) return [];
+    const out = [];
+    while (out.length < count) {
+      out.push(...shuffle(pool));
+    }
+    return out.slice(0, count);
+  }
+
   function buildMixedQuestions() {
-    const english = shuffle(MCQ_BANK.filter((q) => q.cat === "English")).slice(0, 5);
-    const math = shuffle(MCQ_BANK.filter((q) => q.cat === "Mathematics")).slice(0, 5);
-    const image = shuffle(MCQ_BANK.filter((q) => q.cat === "Image / Pattern")).slice(0, 5);
-    const critical = shuffle(MCQ_BANK.filter((q) => q.cat === "Critical Thinking")).slice(0, 5);
-    return shuffle([...english, ...math, ...image, ...critical]);
+    const total = mixedQuestionCount();
+    const cats = ["English", "Mathematics", "Image / Pattern", "Critical Thinking"];
+    const base = Math.floor(total / cats.length);
+    let rem = total - base * cats.length;
+    const parts = cats.map((cat) => {
+      const n = base + (rem > 0 ? 1 : 0);
+      if (rem > 0) rem -= 1;
+      return takeCategoryQuestions(cat, n);
+    });
+    return shuffle(parts.flat());
   }
 
   function startTest() {
