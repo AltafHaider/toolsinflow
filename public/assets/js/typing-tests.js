@@ -381,17 +381,43 @@
     return text;
   }
 
+  const NUMERIC_BANK = [
+    () => `${randomDigits(3)}-${randomDigits(4)}-${randomDigits(4)}`,
+    () => `${randomDigits(2)}.${randomDigits(2)}.${randomDigits(4)}`,
+    () => `${(1000 + Math.floor(Math.random() * 9000)).toLocaleString("en-US")}.${randomDigits(2)}`,
+    () => `0${randomDigits(3)}-${randomDigits(7)}`,
+    () => `${randomDigits(5)}/${randomDigits(5)}/${randomDigits(2)}`,
+    () => `PK${randomDigits(2)} ${randomDigits(4)} ${randomDigits(4)} ${randomDigits(4)}`,
+    () => `${randomDigits(8)}`,
+    () => `${randomDigits(2)}:${randomDigits(2)}:${randomDigits(2)}`,
+    () => `#${randomDigits(6)}-${randomCode(1, 2)}`,
+    () => `${randomDigits(4)} x ${randomDigits(2)} = ${randomDigits(5)}`,
+  ];
+
   function buildEntries(count) {
     const items = [];
-    // Harder mix: streets, 4–5 word sentences, and mixed phrases appear often.
+    // Balanced mix: numerics + English streets/sentences + codes (not all English).
     const types = shuffle([
-      "street", "street", "sentence", "sentence", "mixed", "mixed",
-      "name", "phone", "cnic", "amount", "code", "date", "city",
-      "email", "sku", "plate", "address", "house",
+      "numeric", "numeric", "numeric", "numeric",
+      "phone", "cnic", "amount", "code", "date", "iban", "sku", "plate", "roll", "otp", "coords",
+      "street", "sentence", "mixed", "name", "email", "address", "house", "city",
     ]);
     for (let i = 0; i < count; i += 1) {
       const roll = types[i % types.length];
-      if (roll === "street") {
+      if (roll === "numeric") {
+        items.push({ label: "Numeric value", value: pick(NUMERIC_BANK)() });
+      } else if (roll === "otp") {
+        items.push({ label: "OTP / PIN", value: randomDigits(6) });
+      } else if (roll === "coords") {
+        items.push({
+          label: "Coordinates",
+          value: `${24 + Math.floor(Math.random() * 6)}.${randomDigits(4)}, ${67 + Math.floor(Math.random() * 7)}.${randomDigits(4)}`,
+        });
+      } else if (roll === "iban") {
+        items.push({ label: "Account digits", value: `PK${randomDigits(2)}${randomDigits(4)}${randomDigits(4)}${randomDigits(4)}` });
+      } else if (roll === "roll") {
+        items.push({ label: "Roll number", value: `R-${2026}${randomDigits(4)}` });
+      } else if (roll === "street") {
         items.push({ label: "Street name", value: pick(STREET_NAMES) });
       } else if (roll === "sentence") {
         items.push({ label: "Type this sentence", value: pick(SENTENCE_BANK) });
@@ -484,7 +510,7 @@
     if (!isEntry) return;
     const sec = state.durationSec;
     setupTitle.textContent = "Data entry test";
-    setupCopy.textContent = `Choose ${sec} seconds. Retype street names, short sentences, mixed words, and codes exactly, then press Enter. Results show CPM, WPM, and accuracy.`;
+    setupCopy.textContent = `Choose ${sec} seconds. Retype numbers, street names, short sentences, and mixed codes exactly, then press Enter. Results show CPM, WPM, and accuracy.`;
     startBtn.textContent = `Start ${sec}s data entry`;
   }
 

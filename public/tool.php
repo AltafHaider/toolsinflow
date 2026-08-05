@@ -136,7 +136,7 @@ $isPdfUpload = $needsPdfToWord || $needsMergePdf || $needsSplitPdf || $needsComp
   <?php if ($tool && $needsPdfForms): ?>
   <script src="<?= $assetBase ?>/js/pdf-form-editor.js?v=13"></script>
   <?php elseif ($tool && $needsTypingTest): ?>
-  <script src="<?= $assetBase ?>/js/typing-tests.js?v=11"></script>
+  <script src="<?= $assetBase ?>/js/typing-tests.js?v=12"></script>
   <?php elseif ($tool): ?>
   <script src="<?= $assetBase ?>/js/image-core.js?v=21"></script>
   <script src="<?= $assetBase ?>/js/tools.js?v=48"></script>
