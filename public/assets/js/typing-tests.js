@@ -301,6 +301,7 @@
     mcqWrong: 0,
     mcqSkipped: 0,
     byCat: {},
+    timerStarted: false,
   };
 
   function shuffle(list) {
@@ -563,7 +564,7 @@
       statProgressLabel.textContent = "Answered";
     } else {
       setupTitle.textContent = "Typing speed test";
-      setupCopy.textContent = "Choose duration, then use Random text or Custom paragraph (20 topics).";
+      setupCopy.textContent = "Choose duration, then use Random text or Custom paragraph. The timer starts when you type the first character.";
       startBtn.textContent = "Start typing test";
       statWpmLabel.textContent = "WPM";
       statAccuracyLabel.textContent = "Accuracy";
@@ -579,6 +580,7 @@
   }
 
   function elapsedMinutes() {
+    if (!state.timerStarted || !state.startedAt) return 1 / 60;
     return Math.max(1, Date.now() - state.startedAt) / 60000;
   }
 
@@ -602,9 +604,13 @@
   }
 
   function updateLiveStats() {
-    const left = (state.endsAt - Date.now()) / 1000;
-    statTimer.textContent = formatTime(left);
-    statWpm.textContent = String(liveWpm());
+    if (isTyping && !state.timerStarted) {
+      statTimer.textContent = formatTime(state.durationSec);
+    } else {
+      const left = (state.endsAt - Date.now()) / 1000;
+      statTimer.textContent = formatTime(left);
+    }
+    statWpm.textContent = String(state.timerStarted || isEntry || isMixed ? liveWpm() : 0);
     statAccuracy.textContent = `${liveAccuracy()}%`;
     if (isEntry) {
       statProgress.textContent = String(state.entryCorrect + state.entryWrong + state.entrySkipped);
@@ -613,6 +619,22 @@
     } else {
       statProgress.textContent = String(state.typed.length);
     }
+  }
+
+  function beginTypingTimer() {
+    if (state.timerStarted || !state.running) return;
+    state.timerStarted = true;
+    state.startedAt = Date.now();
+    state.endsAt = state.startedAt + state.durationSec * 1000;
+    clearTimer();
+    state.timerId = setInterval(() => {
+      if (Date.now() >= state.endsAt) {
+        finishTest();
+        return;
+      }
+      updateLiveStats();
+    }, 200);
+    updateLiveStats();
   }
 
   function renderPassage() {
@@ -645,6 +667,9 @@
         inputEl.setSelectionRange(pos, pos);
       } catch (e) {}
     }
+
+    // Timer starts only when the user actually types something.
+    if (value.length > 0) beginTypingTimer();
 
     state.typed = value;
     let correct = 0;
@@ -894,8 +919,9 @@
 
     clearTimer();
     state.running = true;
-    state.startedAt = Date.now();
-    state.endsAt = state.startedAt + state.durationSec * 1000;
+    state.timerStarted = false;
+    state.startedAt = 0;
+    state.endsAt = 0;
     state.typed = "";
     state.correct = 0;
     state.incorrect = 0;
@@ -919,18 +945,30 @@
     show("run");
 
     if (isEntry) {
+      state.timerStarted = true;
+      state.startedAt = Date.now();
+      state.endsAt = state.startedAt + state.durationSec * 1000;
       state.entries = buildEntries(120);
       showEntry();
+      startCountdown();
     } else if (isMixed) {
+      state.timerStarted = true;
+      state.startedAt = Date.now();
+      state.endsAt = state.startedAt + state.durationSec * 1000;
       state.questions = buildMixedQuestions();
       renderMcq();
+      startCountdown();
     } else {
       state.target = buildPassage();
       inputEl.value = "";
       renderPassage();
       inputEl.focus();
+      updateLiveStats();
     }
+  }
 
+  function startCountdown() {
+    clearTimer();
     updateLiveStats();
     state.timerId = setInterval(() => {
       if (Date.now() >= state.endsAt) {
@@ -944,6 +982,7 @@
   function resetToSetup() {
     clearTimer();
     state.running = false;
+    state.timerStarted = false;
     inputEl.value = "";
     entryInput.value = "";
     show("setup");
