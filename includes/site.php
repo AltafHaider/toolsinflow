@@ -118,6 +118,9 @@ function cz_tool_icon(string $id): string
         'grayscale-image' => '<circle cx="12" cy="12" r="8"/><path d="M12 4v16a8 8 0 000-16z"/>',
         'blur-faces' => '<circle cx="12" cy="9.5" r="3.2"/><path d="M6 19a6 6 0 0112 0"/><path d="M5 8.5h2.2M16.8 8.5H19M8.2 5.8l1.3 1.3M15.8 5.8l-1.3 1.3"/>',
         'images-to-pdf' => '<path d="M7 3h8l4 4v14H7z"/><path d="M15 3v4h4M9 12h6M9 15h6M9 18h4"/>',
+        'typing-test' => '<rect x="3" y="5" width="18" height="12" rx="2"/><path d="M7 20h10M12 17v3"/><path d="M7 9h2M11 9h2M15 9h2M8 12h8"/>',
+        'data-entry-test' => '<rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/><circle cx="16.5" cy="16" r="1.2"/>',
+        'mixed-test' => '<path d="M4 7h7v10H4zM13 7h7v4h-7zM13 13h7v4h-7z"/><path d="M6.5 10h2M6.5 13h2"/>',
     ];
 
     $path = $icons[$id] ?? '<rect x="6" y="6" width="12" height="12" rx="2"/>';
@@ -145,7 +148,7 @@ function cz_render_head(string $title, string $description, string $path = '/', 
   <meta name="theme-color" content="#f4f7f5" />
   <title><?= cz_h($title) ?></title>
   <meta name="description" content="<?= cz_h($description) ?>" />
-  <meta name="keywords" content="toolsinflow, free online tools, all-in-one toolkit, image tools, pdf tools, compress image, convert files, remove background, resize image, blur faces, pdf form creator, pdf to word, word to pdf" />
+  <meta name="keywords" content="toolsinflow, free online tools, all-in-one toolkit, image tools, pdf tools, compress image, convert files, remove background, resize image, blur faces, pdf form creator, pdf to word, word to pdf, typing test, data entry test, wpm" />
   <meta name="author" content="<?= $appName ?>" />
   <meta name="robots" content="<?= cz_h($robots) ?>" />
   <meta name="googlebot" content="index, follow" />
@@ -167,7 +170,7 @@ function cz_render_head(string $title, string $description, string $path = '/', 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Urbanist:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="<?= $assetBase ?>/css/style.css?v=75" />
+  <link rel="stylesheet" href="<?= $assetBase ?>/css/style.css?v=76" />
   <link rel="preconnect" href="https://images.unsplash.com" crossorigin />
   <script type="application/ld+json">
   <?= json_encode([
@@ -227,6 +230,11 @@ function cz_nav_tools_by_group(): array
             'label' => 'PDF tools',
             'href' => cz_url() . '#pdf',
             'cats' => ['pdf'],
+        ],
+        'test' => [
+            'label' => 'Typing & tests',
+            'href' => cz_url() . '#test-tools',
+            'cats' => ['test'],
         ],
     ];
 

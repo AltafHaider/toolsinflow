@@ -3647,3 +3647,264 @@ html.pdf-plain-cursor textarea {
   }
 }
 
+
+/* —— Typing & aptitude tests —— */
+.typing-shell {
+  max-width: 920px;
+  margin: 0 auto 3rem;
+}
+
+.typing-panel {
+  background:
+    radial-gradient(ellipse 70% 55% at 10% 0%, color-mix(in srgb, var(--accent) 14%, transparent), transparent 55%),
+    radial-gradient(ellipse 50% 40% at 100% 20%, color-mix(in srgb, var(--accent) 8%, transparent), transparent 60%),
+    var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 1.35rem 1.35rem 1.5rem;
+  box-shadow: 0 16px 40px color-mix(in srgb, var(--ink) 6%, transparent);
+}
+
+.typing-mode-tag {
+  display: inline-flex;
+  margin: 0 0 0.55rem;
+  padding: 0.22rem 0.65rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  color: var(--accent);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.typing-setup-title {
+  margin: 0 0 0.4rem;
+  font-size: clamp(1.35rem, 2.4vw, 1.75rem);
+  color: var(--ink);
+}
+
+.typing-setup-copy {
+  margin: 0 0 1.25rem;
+  color: var(--muted);
+  max-width: 42rem;
+}
+
+.typing-label {
+  display: block;
+  margin-bottom: 0.55rem;
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.typing-durations {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1.25rem;
+}
+
+.typing-duration {
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--ink);
+  border-radius: 999px;
+  padding: 0.45rem 0.85rem;
+  font: inherit;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
+}
+
+.typing-duration:hover {
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+}
+
+.typing-duration.is-active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-ink);
+}
+
+.typing-start-btn {
+  min-width: 200px;
+}
+
+.typing-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.65rem;
+  margin-bottom: 1rem;
+}
+
+.typing-stat {
+  background: color-mix(in srgb, var(--surface-2) 88%, transparent);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 0.7rem 0.75rem;
+  text-align: center;
+}
+
+.typing-stat strong {
+  display: block;
+  font-size: 1.25rem;
+  line-height: 1.2;
+  color: var(--ink);
+}
+
+.typing-stat span {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.typing-prompt-card {
+  margin-bottom: 0.9rem;
+  padding: 1rem 1.1rem;
+  border-radius: 14px;
+  border: 1px dashed color-mix(in srgb, var(--accent) 45%, var(--border));
+  background: color-mix(in srgb, var(--accent) 7%, var(--surface));
+  text-align: center;
+}
+
+.typing-prompt-label {
+  display: block;
+  margin-bottom: 0.35rem;
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.typing-prompt-value {
+  margin: 0;
+  font-size: clamp(1.35rem, 3vw, 1.85rem);
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  color: var(--ink);
+  word-break: break-word;
+}
+
+.typing-text-wrap {
+  position: relative;
+  margin-bottom: 1rem;
+}
+
+.typing-text {
+  min-height: 180px;
+  max-height: 280px;
+  overflow: auto;
+  padding: 1rem 1.05rem;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  font-size: 1.15rem;
+  line-height: 1.75;
+  letter-spacing: 0.01em;
+  color: color-mix(in srgb, var(--ink) 42%, var(--muted));
+}
+
+.typing-text .ch.is-ok {
+  color: var(--ink);
+}
+
+.typing-text .ch.is-bad {
+  color: #d64545;
+  background: color-mix(in srgb, #d64545 14%, transparent);
+  border-radius: 3px;
+}
+
+.typing-text .ch.is-current {
+  color: var(--ink);
+  background: color-mix(in srgb, var(--accent) 28%, transparent);
+  border-radius: 3px;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 45%, transparent);
+}
+
+.typing-input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  resize: none;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  cursor: text;
+}
+
+.typing-entry-wrap {
+  display: flex;
+  gap: 0.55rem;
+  margin-bottom: 1rem;
+}
+
+.typing-entry-input {
+  flex: 1;
+  min-width: 0;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--ink);
+  border-radius: 12px;
+  padding: 0.85rem 1rem;
+  font: inherit;
+  font-size: 1.05rem;
+}
+
+.typing-entry-input:focus {
+  outline: none;
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--border));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 16%, transparent);
+}
+
+.typing-run-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  align-items: center;
+}
+
+.typing-result-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.7rem;
+  margin: 1.1rem 0 1.35rem;
+}
+
+.typing-result-card {
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  border-radius: 12px;
+  padding: 0.9rem 0.8rem;
+  text-align: center;
+}
+
+.typing-result-card strong {
+  display: block;
+  font-size: 1.35rem;
+  color: var(--ink);
+}
+
+.typing-result-card span {
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+@media (max-width: 720px) {
+  .typing-stats,
+  .typing-result-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .typing-entry-wrap {
+    flex-direction: column;
+  }
+
+  .typing-text {
+    font-size: 1.05rem;
+    min-height: 160px;
+  }
+}

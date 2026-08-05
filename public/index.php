@@ -9,7 +9,7 @@ foreach ($tools as $id => $tool) {
     $byCat[$tool['cat']][$id] = $tool;
 }
 
-$featured = ['pdf-form-creator', 'compress-pdf', 'bg-remove', 'compress-image', 'images-to-pdf', 'pdf-to-word'];
+$featured = ['pdf-form-creator', 'typing-test', 'bg-remove', 'data-entry-test', 'compress-pdf', 'compress-image'];
 ?>
 <!DOCTYPE html>
 <html lang="en" data-theme="light">
@@ -301,6 +301,7 @@ $featured = ['pdf-form-creator', 'compress-pdf', 'bg-remove', 'compress-image', 
     <?php
       $imageCats = ['optimize', 'convert', 'edit', 'effects'];
       $pdfCats = ['pdf'];
+      $testCats = ['test'];
     ?>
 
     <div class="tools-group" id="pdf">
@@ -325,6 +326,22 @@ $featured = ['pdf-form-creator', 'compress-pdf', 'bg-remove', 'compress-image', 
         <?php if (empty($byCat[$catId])) continue; ?>
         <h4 class="cat-title" id="<?= cz_h($catId) ?>"><?= cz_h($categories[$catId] ?? $catId) ?></h4>
         <div class="tools-grid">
+          <?php foreach ($byCat[$catId] as $id => $tool): ?>
+            <a class="tool-card" href="<?= cz_tool_url($id) ?>">
+              <?= cz_tool_icon($id) ?>
+              <strong><?= cz_h($tool['name']) ?></strong>
+              <span><?= cz_h($tool['desc']) ?></span>
+            </a>
+          <?php endforeach; ?>
+        </div>
+      <?php endforeach; ?>
+    </div>
+
+    <div class="tools-group" id="test-tools">
+      <h3 class="group-title">Typing &amp; tests</h3>
+      <?php foreach ($testCats as $catId): ?>
+        <?php if (empty($byCat[$catId])) continue; ?>
+        <div class="tools-grid" id="<?= cz_h($catId) ?>">
           <?php foreach ($byCat[$catId] as $id => $tool): ?>
             <a class="tool-card" href="<?= cz_tool_url($id) ?>">
               <?= cz_tool_icon($id) ?>
@@ -376,7 +393,7 @@ $featured = ['pdf-form-creator', 'compress-pdf', 'bg-remove', 'compress-image', 
       </details>
       <details class="faq-item">
         <summary>What can I do here?</summary>
-        <p>Compress and convert images, remove backgrounds, blur faces, create fillable PDF forms, convert PDF to Word, combine images into PDF, and more, all in one toolkit.</p>
+        <p>Compress and convert images, remove backgrounds, blur faces, create fillable PDF forms, convert PDF to Word, take typing and data entry tests, combine images into PDF, and more, all in one toolkit.</p>
       </details>
       <details class="faq-item">
         <summary>Can I remove backgrounds online?</summary>

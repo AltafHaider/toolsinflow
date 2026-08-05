@@ -130,6 +130,21 @@ return [
             'desc' => 'Combine JPG/PNG/WebP images into one PDF.',
             'cat'  => 'convert',
         ],
+        'typing-test' => [
+            'name' => 'Typing Test',
+            'desc' => 'Check your typing speed and accuracy. Choose 30 seconds up to 30 minutes.',
+            'cat'  => 'test',
+        ],
+        'data-entry-test' => [
+            'name' => 'Data Entry Test',
+            'desc' => '120-second aptitude-style data entry test with codes, names, phones, and amounts.',
+            'cat'  => 'test',
+        ],
+        'mixed-test' => [
+            'name' => 'Mixed Test',
+            'desc' => 'Practice words, numbers, and codes together — a mixed typing and data challenge.',
+            'cat'  => 'test',
+        ],
     ],
 
     'categories' => [
@@ -138,5 +153,6 @@ return [
         'convert'  => 'Convert',
         'edit'     => 'Edit',
         'effects'  => 'Effects',
+        'test'     => 'Typing & Tests',
     ],
 ];

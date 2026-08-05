@@ -26,6 +26,7 @@ $needsMergePdf = $id === 'merge-pdf';
 $needsSplitPdf = $id === 'split-pdf';
 $needsCompressPdf = $id === 'compress-pdf';
 $needsPdfForms = $id === 'pdf-form-creator';
+$needsTypingTest = in_array($id, ['typing-test', 'data-entry-test', 'mixed-test'], true);
 $isDocExchange = $needsPdfToWord || $needsWordToPdf;
 $isSinglePdf = $needsPdfToWord || $needsSplitPdf || $needsCompressPdf;
 $isPdfUpload = $needsPdfToWord || $needsMergePdf || $needsSplitPdf || $needsCompressPdf;
@@ -71,6 +72,8 @@ $isPdfUpload = $needsPdfToWord || $needsMergePdf || $needsSplitPdf || $needsComp
 
     <?php if ($needsPdfForms): ?>
       <?php require dirname(__DIR__) . '/includes/pdf-form-editor-view.php'; ?>
+    <?php elseif ($needsTypingTest): ?>
+      <?php require dirname(__DIR__) . '/includes/typing-test-view.php'; ?>
     <?php else: ?>
     <main class="container">
       <div class="workspace" id="workspace" data-tool="<?= cz_h($id) ?>">
@@ -132,6 +135,8 @@ $isPdfUpload = $needsPdfToWord || $needsMergePdf || $needsSplitPdf || $needsComp
   <script src="<?= $assetBase ?>/js/app.js?v=42"></script>
   <?php if ($tool && $needsPdfForms): ?>
   <script src="<?= $assetBase ?>/js/pdf-form-editor.js?v=13"></script>
+  <?php elseif ($tool && $needsTypingTest): ?>
+  <script src="<?= $assetBase ?>/js/typing-tests.js?v=1"></script>
   <?php elseif ($tool): ?>
   <script src="<?= $assetBase ?>/js/image-core.js?v=21"></script>
   <script src="<?= $assetBase ?>/js/tools.js?v=48"></script>
