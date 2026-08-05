@@ -434,9 +434,9 @@
       statAccuracyLabel.textContent = "Accuracy";
       statProgressLabel.textContent = "Correct";
     } else if (isMixed) {
-      setupTitle.textContent = "Mixed aptitude test";
-      setupCopy.textContent = "No typing here — answer MCQs from English, Math, image/pattern, and critical thinking.";
-      startBtn.textContent = "Start mixed MCQ test";
+      setupTitle.textContent = "Critical thinking test";
+      setupCopy.textContent = "Answer MCQs across English, Mathematics, image/pattern, and critical thinking.";
+      startBtn.textContent = "Start critical thinking test";
       statWpmLabel.textContent = "Score";
       statAccuracyLabel.textContent = "Accuracy";
       statProgressLabel.textContent = "Answered";
@@ -635,7 +635,7 @@
     if (isMixed) {
       const totalQ = state.questions.length;
       const score = state.mcqCorrect;
-      resultsTitle.textContent = score >= totalQ * 0.8 ? "Excellent aptitude score" : score >= totalQ * 0.6 ? "Good attempt" : "Test complete";
+      resultsTitle.textContent = score >= totalQ * 0.8 ? "Excellent critical thinking score" : score >= totalQ * 0.6 ? "Good attempt" : "Test complete";
       const cards = [
         { label: "Score", value: `${score}/${totalQ}` },
         { label: "Accuracy", value: `${accuracy}%` },

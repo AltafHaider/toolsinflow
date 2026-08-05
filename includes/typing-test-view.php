@@ -3,7 +3,7 @@ declare(strict_types=1);
 /** @var string $id */
 $modeLabel = match ($id) {
     'data-entry-test' => 'Data entry',
-    'mixed-test' => 'Aptitude MCQs',
+    'mixed-test' => 'Critical thinking',
     default => 'Typing speed',
 };
 $isTyping = $id === 'typing-test';

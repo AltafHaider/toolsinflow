@@ -141,8 +141,8 @@ return [
             'cat'  => 'test',
         ],
         'mixed-test' => [
-            'name' => 'Mixed Test',
-            'desc' => 'Aptitude MCQs only: English, Mathematics, image/pattern, and critical thinking.',
+            'name' => 'Critical Thinking Test',
+            'desc' => 'Critical thinking MCQs with English, Mathematics, and image/pattern questions.',
             'cat'  => 'test',
         ],
     ],
