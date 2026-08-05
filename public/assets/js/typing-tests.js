@@ -66,12 +66,14 @@
   ];
 
   const MIXED_DURATIONS = [
-    { sec: 300, label: "5 min", questions: 10 },
+    { sec: 300, label: "5 min", questions: 12 },
     { sec: 600, label: "10 min", questions: 20 },
-    { sec: 900, label: "15 min", questions: 30 },
+    { sec: 900, label: "15 min", questions: 28 },
     { sec: 1200, label: "20 min", questions: 40 },
     { sec: 1800, label: "30 min", questions: 60 },
   ];
+
+  const MIXED_CATEGORIES = ["Grammar", "Mathematics", "Images", "Critical Thinking"];
 
   // Random-mode passages (different from the custom paragraph list).
   const PASSAGES = [
@@ -113,17 +115,22 @@
   const CITIES = ["Karachi", "Lahore", "Islamabad", "Peshawar", "Quetta", "Multan", "Faisalabad", "Rawalpindi", "Sialkot", "Hyderabad"];
 
   const MCQ_BANK = [
-    // English
-    { cat: "English", q: "Choose the correct spelling.", options: ["Accomodation", "Accommodation", "Acommodation", "Accomadation"], answer: 1 },
-    { cat: "English", q: "Synonym of \"rapid\" is:", options: ["Slow", "Quick", "Heavy", "Quiet"], answer: 1 },
-    { cat: "English", q: "Antonym of \"scarce\" is:", options: ["Rare", "Limited", "Abundant", "Tiny"], answer: 2 },
-    { cat: "English", q: "Fill in the blank: She ____ to school every day.", options: ["go", "goes", "going", "gone"], answer: 1 },
-    { cat: "English", q: "Which sentence is grammatically correct?", options: ["He don't like tea.", "He doesn't likes tea.", "He doesn't like tea.", "He not like tea."], answer: 2 },
-    { cat: "English", q: "\"Benevolent\" most nearly means:", options: ["Angry", "Kind", "Confused", "Lazy"], answer: 1 },
-    { cat: "English", q: "Choose the correct article: ____ honest man.", options: ["A", "An", "The", "No article"], answer: 1 },
-    { cat: "English", q: "Plural of \"crisis\" is:", options: ["Crisises", "Crisis", "Crises", "Crisies"], answer: 2 },
-    { cat: "English", q: "Identify the noun in: \"Courage wins respect.\"", options: ["Wins", "Courage", "Respectfully", "The"], answer: 1 },
-    { cat: "English", q: "Which word is a verb?", options: ["Beautiful", "Happiness", "Decide", "Quickly"], answer: 2 },
+    // Grammar
+    { cat: "Grammar", q: "Choose the correct spelling.", options: ["Accomodation", "Accommodation", "Acommodation", "Accomadation"], answer: 1 },
+    { cat: "Grammar", q: "Synonym of \"rapid\" is:", options: ["Slow", "Quick", "Heavy", "Quiet"], answer: 1 },
+    { cat: "Grammar", q: "Antonym of \"scarce\" is:", options: ["Rare", "Limited", "Abundant", "Tiny"], answer: 2 },
+    { cat: "Grammar", q: "Fill in the blank: She ____ to school every day.", options: ["go", "goes", "going", "gone"], answer: 1 },
+    { cat: "Grammar", q: "Which sentence is grammatically correct?", options: ["He don't like tea.", "He doesn't likes tea.", "He doesn't like tea.", "He not like tea."], answer: 2 },
+    { cat: "Grammar", q: "\"Benevolent\" most nearly means:", options: ["Angry", "Kind", "Confused", "Lazy"], answer: 1 },
+    { cat: "Grammar", q: "Choose the correct article: ____ honest man.", options: ["A", "An", "The", "No article"], answer: 1 },
+    { cat: "Grammar", q: "Plural of \"crisis\" is:", options: ["Crisises", "Crisis", "Crises", "Crisies"], answer: 2 },
+    { cat: "Grammar", q: "Identify the noun in: \"Courage wins respect.\"", options: ["Wins", "Courage", "Respectfully", "The"], answer: 1 },
+    { cat: "Grammar", q: "Which word is a verb?", options: ["Beautiful", "Happiness", "Decide", "Quickly"], answer: 2 },
+    { cat: "Grammar", q: "Choose the correct form: They ____ finished the work.", options: ["has", "have", "having", "is"], answer: 1 },
+    { cat: "Grammar", q: "Which is a correct comparative?", options: ["more better", "better", "most better", "goodest"], answer: 1 },
+    { cat: "Grammar", q: "Select the correct preposition: He is good ____ maths.", options: ["in", "at", "on", "by"], answer: 1 },
+    { cat: "Grammar", q: "Passive voice of \"She writes a letter\":", options: ["A letter wrote she.", "A letter is written by her.", "A letter was write by her.", "She is written a letter."], answer: 1 },
+    { cat: "Grammar", q: "Find the adjective: \"The bright lamp lit the room.\"", options: ["lamp", "bright", "lit", "room"], answer: 1 },
 
     // Mathematics
     { cat: "Mathematics", q: "What is 15% of 200?", options: ["20", "25", "30", "35"], answer: 2 },
@@ -137,58 +144,58 @@
     { cat: "Mathematics", q: "If 5 pens cost 40, one pen costs:", options: ["6", "7", "8", "9"], answer: 2 },
     { cat: "Mathematics", q: "Perimeter of a square with side 9 is:", options: ["18", "27", "36", "81"], answer: 2 },
 
-    // Image / pattern (SVG visuals)
+    // Images
     {
-      cat: "Image / Pattern",
+      cat: "Images",
       q: "How many triangles are clearly shown in the figure?",
       image: "triangles",
       options: ["2", "3", "4", "5"],
       answer: 1,
     },
     {
-      cat: "Image / Pattern",
+      cat: "Images",
       q: "Which shape is different from the others?",
       image: "odd-shape",
       options: ["Circle A", "Circle B", "Square C", "Circle D"],
       answer: 2,
     },
     {
-      cat: "Image / Pattern",
+      cat: "Images",
       q: "What comes next in the sequence?",
       image: "seq-dots",
       options: ["1 dot", "4 dots", "5 dots", "6 dots"],
       answer: 2,
     },
     {
-      cat: "Image / Pattern",
+      cat: "Images",
       q: "Count the shaded squares.",
       image: "shaded",
       options: ["2", "3", "4", "5"],
       answer: 2,
     },
     {
-      cat: "Image / Pattern",
+      cat: "Images",
       q: "Which arrow points in a different direction?",
       image: "arrows",
       options: ["Arrow 1", "Arrow 2", "Arrow 3", "Arrow 4"],
       answer: 2,
     },
     {
-      cat: "Image / Pattern",
+      cat: "Images",
       q: "Find the missing number in the pattern shown.",
       image: "num-circle",
       options: ["8", "9", "10", "12"],
       answer: 1,
     },
     {
-      cat: "Image / Pattern",
+      cat: "Images",
       q: "Which figure completes the set (all have 3 sides)?",
       image: "polygon-set",
       options: ["Circle", "Triangle", "Square", "Pentagon"],
       answer: 1,
     },
     {
-      cat: "Image / Pattern",
+      cat: "Images",
       q: "How many circles appear in the image?",
       image: "circles",
       options: ["3", "4", "5", "6"],
@@ -399,14 +406,16 @@
   function mixedQuestionCount() {
     const match = MIXED_DURATIONS.find((item) => item.sec === state.durationSec);
     if (match?.questions) return match.questions;
-    return Math.max(10, Math.round((state.durationSec / 60) * 2));
+    // Fallback: 2 per minute, rounded down to a multiple of 4 for equal categories.
+    const raw = Math.max(8, Math.round((state.durationSec / 60) * 2));
+    return Math.max(8, raw - (raw % 4));
   }
 
   function updateMixedSetupHint() {
     if (!isMixed) return;
     const count = mixedQuestionCount();
     const mins = Math.round(state.durationSec / 60);
-    setupCopy.textContent = `${mins} minutes = ${count} questions (English, Math, image/pattern, and critical thinking).`;
+    setupCopy.textContent = `${mins} minutes = ${count} questions — equal share for Grammar, Maths, Images, and Critical Thinking (${count / 4} each).`;
     startBtn.textContent = `Start ${count}-question test`;
   }
 
@@ -693,9 +702,9 @@
         { label: "Accuracy", value: `${accuracy}%` },
         { label: "Wrong", value: String(state.mcqWrong) },
         { label: "Skipped", value: String(state.mcqSkipped) },
-        { label: "English", value: `${state.byCat.English?.correct || 0}` },
-        { label: "Math", value: `${state.byCat.Mathematics?.correct || 0}` },
-        { label: "Image", value: `${state.byCat["Image / Pattern"]?.correct || 0}` },
+        { label: "Grammar", value: `${state.byCat.Grammar?.correct || 0}` },
+        { label: "Maths", value: `${state.byCat.Mathematics?.correct || 0}` },
+        { label: "Images", value: `${state.byCat.Images?.correct || 0}` },
         { label: "Critical", value: `${state.byCat["Critical Thinking"]?.correct || 0}` },
         { label: "Duration", value: formatTime(state.durationSec) },
       ];
@@ -760,14 +769,9 @@
 
   function buildMixedQuestions() {
     const total = mixedQuestionCount();
-    const cats = ["English", "Mathematics", "Image / Pattern", "Critical Thinking"];
-    const base = Math.floor(total / cats.length);
-    let rem = total - base * cats.length;
-    const parts = cats.map((cat) => {
-      const n = base + (rem > 0 ? 1 : 0);
-      if (rem > 0) rem -= 1;
-      return takeCategoryQuestions(cat, n);
-    });
+    // Always split evenly across Grammar, Maths, Images, Critical Thinking.
+    const perCat = Math.max(1, Math.floor(total / MIXED_CATEGORIES.length));
+    const parts = MIXED_CATEGORIES.map((cat) => takeCategoryQuestions(cat, perCat));
     return shuffle(parts.flat());
   }
 
