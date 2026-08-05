@@ -381,19 +381,6 @@
     return text;
   }
 
-  const NUMERIC_BANK = [
-    () => `${randomDigits(3)}-${randomDigits(4)}-${randomDigits(4)}`,
-    () => `${randomDigits(2)}.${randomDigits(2)}.${randomDigits(4)}`,
-    () => `${(1000 + Math.floor(Math.random() * 9000)).toLocaleString("en-US")}.${randomDigits(2)}`,
-    () => `0${randomDigits(3)}-${randomDigits(7)}`,
-    () => `${randomDigits(5)}/${randomDigits(5)}/${randomDigits(2)}`,
-    () => `PK${randomDigits(2)} ${randomDigits(4)} ${randomDigits(4)} ${randomDigits(4)}`,
-    () => `${randomDigits(8)}`,
-    () => `${randomDigits(2)}:${randomDigits(2)}:${randomDigits(2)}`,
-    () => `#${randomDigits(6)}-${randomCode(1, 2)}`,
-    () => `${randomDigits(4)} x ${randomDigits(2)} = ${randomDigits(5)}`,
-  ];
-
   function buildEntries(count) {
     const items = [];
     // Fixed repeating order: Alphabetic → CNIC → Street → Sentence → Mixed (letters+numbers).
