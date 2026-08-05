@@ -137,7 +137,7 @@ return [
         ],
         'data-entry-test' => [
             'name' => 'Data Entry Test',
-            'desc' => '60 or 120 second data entry test. Score shows attempted, correct, wrong, and accuracy.',
+            'desc' => '60 or 120 second data entry with street names, sentences, mixed words, codes — plus CPM, WPM, and accuracy.',
             'cat'  => 'test',
         ],
         'mixed-test' => [

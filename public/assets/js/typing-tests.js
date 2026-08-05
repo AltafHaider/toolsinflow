@@ -118,6 +118,57 @@
   const FIRST_NAMES = ["Ayesha", "Hassan", "Fatima", "Omar", "Zainab", "Bilal", "Sana", "Usman", "Maryam", "Ali", "Noor", "Hamza", "Sara", "Imran", "Hina"];
   const LAST_NAMES = ["Khan", "Ahmed", "Ali", "Hussain", "Raza", "Malik", "Sheikh", "Iqbal", "Farooq", "Qureshi", "Siddiqui", "Butt"];
   const CITIES = ["Karachi", "Lahore", "Islamabad", "Peshawar", "Quetta", "Multan", "Faisalabad", "Rawalpindi", "Sialkot", "Hyderabad"];
+  const STREET_NAMES = [
+    "Main Boulevard Gulberg",
+    "Shahrah-e-Faisal Block",
+    "Jail Road Extension",
+    "University Avenue North",
+    "Mall Road Near Liberty",
+    "Clifton Block Five Street",
+    "Blue Area Sector G",
+    "Canal Bank Road East",
+    "Satellite Town Market Lane",
+    "Garden Town Service Road",
+    "I-8 Markaz Street Twelve",
+    "Bahadurabad Nishter Road",
+    "DHA Phase Six Avenue",
+    "Saddar Circular Road West",
+    "Allama Iqbal Town Street",
+    "Model Town Link Road",
+    "F-10 Markaz Street Four",
+    "Tariq Road Commercial Plaza",
+    "Gulshan-e-Iqbal Block Two",
+    "Cantt Station Approach Road",
+  ];
+  const SENTENCE_BANK = [
+    "Please verify the account details carefully",
+    "Submit the form before office closing time",
+    "Customer requested urgent delivery this evening",
+    "Keep the original receipt for future claims",
+    "Update the shipping address without any delay",
+    "Confirm payment status before dispatching goods",
+    "Double check every code before final save",
+    "Print the invoice and attach supporting papers",
+    "Call the branch for missing document copies",
+    "Enter reference number exactly as shown above",
+    "Review the balance sheet once more tonight",
+    "Store confidential files in the locked cabinet",
+    "Schedule the meeting for next Monday morning",
+    "Replace damaged stock with fresh warehouse units",
+    "Notify the manager about the delayed shipment",
+  ];
+  const MIXED_PHRASES = [
+    "Parcel XR-4412 delayed at warehouse gate",
+    "Token 78B queued for counter three today",
+    "Room 204 keys returned after evening shift",
+    "Batch LOT9C sealed with red tape strip",
+    "File Case-19 moved to archive shelf B",
+    "Visitor pass VP-330 expires at six pm",
+    "Order mix A7 and B12 packed together",
+    "Route R6 via Ring Road then exit 4",
+    "Shift A staff signed in by 08:45 sharp",
+    "Vault PIN check failed twice then locked",
+  ];
 
   const MCQ_BANK = [
     // Grammar
@@ -332,29 +383,54 @@
 
   function buildEntries(count) {
     const items = [];
+    // Harder mix: streets, 4–5 word sentences, and mixed phrases appear often.
     const types = shuffle([
+      "street", "street", "sentence", "sentence", "mixed", "mixed",
       "name", "phone", "cnic", "amount", "code", "date", "city",
-      "email", "sku", "plate", "roll", "iban",
+      "email", "sku", "plate", "address", "house",
     ]);
     for (let i = 0; i < count; i += 1) {
       const roll = types[i % types.length];
-      if (roll === "name") items.push({ label: "Full name", value: `${pick(FIRST_NAMES)} ${pick(LAST_NAMES)}` });
-      else if (roll === "phone") items.push({ label: "Phone number", value: `03${randomDigits(2)}-${randomDigits(7)}` });
-      else if (roll === "cnic") items.push({ label: "CNIC / ID", value: `${randomDigits(5)}-${randomDigits(7)}-${randomDigits(1)}` });
-      else if (roll === "amount") items.push({ label: "Amount (PKR)", value: `${(100 + Math.floor(Math.random() * 9900)).toLocaleString("en-US")}.${randomDigits(2)}` });
-      else if (roll === "code") items.push({ label: "Account code", value: randomCode(3, 4) });
-      else if (roll === "date") {
+      if (roll === "street") {
+        items.push({ label: "Street name", value: pick(STREET_NAMES) });
+      } else if (roll === "sentence") {
+        items.push({ label: "Type this sentence", value: pick(SENTENCE_BANK) });
+      } else if (roll === "mixed") {
+        items.push({ label: "Mixed words", value: pick(MIXED_PHRASES) });
+      } else if (roll === "address") {
+        items.push({
+          label: "Full address",
+          value: `House ${10 + Math.floor(Math.random() * 90)}, ${pick(STREET_NAMES)}, ${pick(CITIES)}`,
+        });
+      } else if (roll === "house") {
+        items.push({
+          label: "House / street",
+          value: `H-${randomDigits(3)} ${pick(STREET_NAMES)}`,
+        });
+      } else if (roll === "name") {
+        items.push({ label: "Full name", value: `${pick(FIRST_NAMES)} ${pick(LAST_NAMES)}` });
+      } else if (roll === "phone") {
+        items.push({ label: "Phone number", value: `03${randomDigits(2)}-${randomDigits(7)}` });
+      } else if (roll === "cnic") {
+        items.push({ label: "CNIC / ID", value: `${randomDigits(5)}-${randomDigits(7)}-${randomDigits(1)}` });
+      } else if (roll === "amount") {
+        items.push({ label: "Amount (PKR)", value: `${(100 + Math.floor(Math.random() * 9900)).toLocaleString("en-US")}.${randomDigits(2)}` });
+      } else if (roll === "code") {
+        items.push({ label: "Account code", value: randomCode(3, 4) });
+      } else if (roll === "date") {
         const d = 1 + Math.floor(Math.random() * 28);
         const m = 1 + Math.floor(Math.random() * 12);
         items.push({ label: "Date", value: `${pad(m)}/${pad(d)}/2026` });
       } else if (roll === "email") {
         const user = `${pick(FIRST_NAMES).toLowerCase()}.${pick(LAST_NAMES).toLowerCase()}${randomDigits(2)}`;
         items.push({ label: "Email", value: `${user}@mail.test` });
-      } else if (roll === "sku") items.push({ label: "SKU", value: `SKU-${randomCode(1, 3)}-${randomDigits(4)}` });
-      else if (roll === "plate") items.push({ label: "Vehicle plate", value: `LE-${randomDigits(2)}-${randomDigits(4)}` });
-      else if (roll === "roll") items.push({ label: "Roll number", value: `R-${2026}${randomDigits(4)}` });
-      else if (roll === "iban") items.push({ label: "IBAN tail", value: `PK${randomDigits(2)}${randomCode(1, 4)}${randomDigits(8)}` });
-      else items.push({ label: "City + code", value: `${pick(CITIES)} ${randomCode(1, 5)}` });
+      } else if (roll === "sku") {
+        items.push({ label: "SKU", value: `SKU-${randomCode(1, 3)}-${randomDigits(4)}` });
+      } else if (roll === "plate") {
+        items.push({ label: "Vehicle plate", value: `LE-${randomDigits(2)}-${randomDigits(4)}` });
+      } else {
+        items.push({ label: "City + code", value: `${pick(CITIES)} ${randomCode(1, 5)}` });
+      }
     }
     return shuffle(items);
   }
@@ -408,7 +484,7 @@
     if (!isEntry) return;
     const sec = state.durationSec;
     setupTitle.textContent = "Data entry test";
-    setupCopy.textContent = `Choose ${sec} seconds. Retype each value exactly and press Enter. When time ends, you get results for attempted, correct, wrong, and accuracy.`;
+    setupCopy.textContent = `Choose ${sec} seconds. Retype street names, short sentences, mixed words, and codes exactly, then press Enter. Results show CPM, WPM, and accuracy.`;
     startBtn.textContent = `Start ${sec}s data entry`;
   }
 
