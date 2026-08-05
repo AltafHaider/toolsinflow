@@ -396,69 +396,47 @@
 
   function buildEntries(count) {
     const items = [];
-    // Balanced mix: numerics + English streets/sentences + codes (not all English).
-    const types = shuffle([
-      "numeric", "numeric", "numeric", "numeric",
-      "phone", "cnic", "amount", "code", "date", "iban", "sku", "plate", "roll", "otp", "coords",
-      "street", "sentence", "mixed", "name", "email", "address", "house", "city",
-    ]);
+    // Fixed repeating order: Alphabetic → CNIC → Street → Sentence → Mixed (letters+numbers).
+    const sequence = ["alpha", "cnic", "street", "sentence", "mixed"];
+
     for (let i = 0; i < count; i += 1) {
-      const roll = types[i % types.length];
-      if (roll === "numeric") {
-        items.push({ label: "Numeric value", value: pick(NUMERIC_BANK)() });
-      } else if (roll === "otp") {
-        items.push({ label: "OTP / PIN", value: randomDigits(6) });
-      } else if (roll === "coords") {
+      const roll = sequence[i % sequence.length];
+
+      if (roll === "alpha") {
+        const alphaPool = [
+          `${pick(FIRST_NAMES)} ${pick(LAST_NAMES)}`,
+          `${pick(FIRST_NAMES)} ${pick(FIRST_NAMES)} ${pick(LAST_NAMES)}`,
+          `${pick(CITIES)} Branch Office`,
+          `Dear ${pick(FIRST_NAMES)} ${pick(LAST_NAMES)}`,
+          `${pick(LAST_NAMES)} Trading Company`,
+        ];
+        items.push({ label: "Alphabetic", value: pick(alphaPool) });
+      } else if (roll === "cnic") {
         items.push({
-          label: "Coordinates",
-          value: `${24 + Math.floor(Math.random() * 6)}.${randomDigits(4)}, ${67 + Math.floor(Math.random() * 7)}.${randomDigits(4)}`,
+          label: "CNIC",
+          value: `${randomDigits(5)}-${randomDigits(7)}-${randomDigits(1)}`,
         });
-      } else if (roll === "iban") {
-        items.push({ label: "Account digits", value: `PK${randomDigits(2)}${randomDigits(4)}${randomDigits(4)}${randomDigits(4)}` });
-      } else if (roll === "roll") {
-        items.push({ label: "Roll number", value: `R-${2026}${randomDigits(4)}` });
       } else if (roll === "street") {
         items.push({ label: "Street name", value: pick(STREET_NAMES) });
       } else if (roll === "sentence") {
-        items.push({ label: "Type this sentence", value: pick(SENTENCE_BANK) });
-      } else if (roll === "mixed") {
-        items.push({ label: "Mixed words", value: pick(MIXED_PHRASES) });
-      } else if (roll === "address") {
-        items.push({
-          label: "Full address",
-          value: `House ${10 + Math.floor(Math.random() * 90)}, ${pick(STREET_NAMES)}, ${pick(CITIES)}`,
-        });
-      } else if (roll === "house") {
-        items.push({
-          label: "House / street",
-          value: `H-${randomDigits(3)} ${pick(STREET_NAMES)}`,
-        });
-      } else if (roll === "name") {
-        items.push({ label: "Full name", value: `${pick(FIRST_NAMES)} ${pick(LAST_NAMES)}` });
-      } else if (roll === "phone") {
-        items.push({ label: "Phone number", value: `03${randomDigits(2)}-${randomDigits(7)}` });
-      } else if (roll === "cnic") {
-        items.push({ label: "CNIC / ID", value: `${randomDigits(5)}-${randomDigits(7)}-${randomDigits(1)}` });
-      } else if (roll === "amount") {
-        items.push({ label: "Amount (PKR)", value: `${(100 + Math.floor(Math.random() * 9900)).toLocaleString("en-US")}.${randomDigits(2)}` });
-      } else if (roll === "code") {
-        items.push({ label: "Account code", value: randomCode(3, 4) });
-      } else if (roll === "date") {
-        const d = 1 + Math.floor(Math.random() * 28);
-        const m = 1 + Math.floor(Math.random() * 12);
-        items.push({ label: "Date", value: `${pad(m)}/${pad(d)}/2026` });
-      } else if (roll === "email") {
-        const user = `${pick(FIRST_NAMES).toLowerCase()}.${pick(LAST_NAMES).toLowerCase()}${randomDigits(2)}`;
-        items.push({ label: "Email", value: `${user}@mail.test` });
-      } else if (roll === "sku") {
-        items.push({ label: "SKU", value: `SKU-${randomCode(1, 3)}-${randomDigits(4)}` });
-      } else if (roll === "plate") {
-        items.push({ label: "Vehicle plate", value: `LE-${randomDigits(2)}-${randomDigits(4)}` });
+        items.push({ label: "Sentence", value: pick(SENTENCE_BANK) });
       } else {
-        items.push({ label: "City + code", value: `${pick(CITIES)} ${randomCode(1, 5)}` });
+        const mixedPool = [
+          ...MIXED_PHRASES,
+          `CNIC ${randomDigits(5)}-${randomDigits(7)}-${randomDigits(1)} ${pick(LAST_NAMES)}`,
+          `Plot ${randomDigits(2)}-${randomCode(1, 2)} ${pick(STREET_NAMES)}`,
+          `Invoice INV-${randomDigits(4)} for ${pick(FIRST_NAMES)}`,
+          `Box ${randomDigits(3)}A on ${pick(STREET_NAMES)}`,
+          `Ref ${randomCode(2, 3)} amount ${randomDigits(4)}.${randomDigits(2)}`,
+          `Flat ${randomDigits(2)}-${randomCode(1, 1)} ${pick(CITIES)} ${randomDigits(5)}`,
+          `Token ${randomDigits(3)}${randomCode(1, 1)} at counter ${randomDigits(1)}`,
+          `SKU-${randomCode(1, 3)}-${randomDigits(4)} qty ${randomDigits(2)}`,
+        ];
+        items.push({ label: "Mixed letters & numbers", value: pick(mixedPool) });
       }
     }
-    return shuffle(items);
+
+    return items;
   }
 
   function renderMcqImage(kind) {
@@ -510,7 +488,7 @@
     if (!isEntry) return;
     const sec = state.durationSec;
     setupTitle.textContent = "Data entry test";
-    setupCopy.textContent = `Choose ${sec} seconds. Retype numbers, street names, short sentences, and mixed codes exactly, then press Enter. Results show CPM, WPM, and accuracy.`;
+    setupCopy.textContent = `Choose ${sec} seconds. Order repeats: Alphabetic → CNIC → Street → Sentence → Mixed letters & numbers. Press Enter after each.`;
     startBtn.textContent = `Start ${sec}s data entry`;
   }
 
