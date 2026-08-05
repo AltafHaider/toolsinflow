@@ -132,7 +132,7 @@ return [
         ],
         'typing-test' => [
             'name' => 'Typing Test',
-            'desc' => 'Timed typing speed test. Use random text or pick from 20 custom paragraphs.',
+            'desc' => 'Typing speed test with random common words (LiveChat-style) or 20 custom paragraphs. Shows CPM, WPM, and accuracy.',
             'cat'  => 'test',
         ],
         'data-entry-test' => [

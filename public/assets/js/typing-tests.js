@@ -80,16 +80,19 @@
 
   const MIXED_CATEGORIES = ["Grammar", "Mathematics", "Images", "Critical Thinking"];
 
-  // Random-mode passages (different from the custom paragraph list).
-  const PASSAGES = [
-    "Practice makes progress. Keep your eyes on the next word, breathe evenly, and let your fingers find a steady rhythm. Accuracy first, then speed will follow as the patterns become familiar.",
-    "Clear communication depends on careful typing. Check spelling, watch punctuation, and stay focused until the timer ends. Small improvements each day build lasting skill.",
-    "Technology helps people work faster, but attention still matters. Type with intention, correct mistakes quickly, and finish strong without rushing into avoidable errors.",
-    "A calm mind supports better results. Sit upright, relax your shoulders, and move through each sentence with confidence. Consistency beats bursts of speed that fade after a minute.",
-    "Good habits create reliable performance. Warm up with short drills, review your accuracy, and challenge yourself with longer sessions when you are ready for more endurance.",
-    "Speed without control creates more corrections than progress. Train yourself to notice each space and capital letter. Clean text is easier to review and more useful in real work.",
-    "When the timer starts, resist the urge to glance at the clock every few seconds. Stay with the current sentence, finish the thought, and trust your pace to settle naturally.",
-    "Keyboard shortcuts save time after typing practice becomes comfortable. Learn a few useful combinations, keep wrists relaxed, and avoid slamming keys when you feel rushed.",
+  // LiveChat-style: random common words (not full sentences) for Random mode.
+  const COMMON_WORDS = [
+    "the", "be", "to", "of", "and", "a", "in", "that", "have", "I", "it", "for", "not", "on", "with", "he", "as", "you", "do", "at",
+    "this", "but", "his", "by", "from", "they", "we", "say", "her", "she", "or", "an", "will", "my", "one", "all", "would", "there", "their", "what",
+    "so", "up", "out", "if", "about", "who", "get", "which", "go", "me", "when", "make", "can", "like", "time", "no", "just", "him", "know", "take",
+    "people", "into", "year", "your", "good", "some", "could", "them", "see", "other", "than", "then", "now", "look", "only", "come", "its", "over", "think", "also",
+    "back", "after", "use", "two", "how", "our", "work", "first", "well", "way", "even", "new", "want", "because", "any", "these", "give", "day", "most", "us",
+    "message", "customer", "support", "chat", "help", "please", "thanks", "hello", "reply", "send", "check", "order", "account", "login", "password", "email", "phone", "team", "agent", "ticket",
+    "update", "status", "pending", "closed", "open", "issue", "solve", "quickly", "today", "tomorrow", "morning", "evening", "service", "quality", "feedback", "review", "request", "confirm", "cancel", "payment",
+    "shipping", "delivery", "product", "price", "discount", "offer", "store", "online", "website", "browser", "click", "button", "screen", "keyboard", "typing", "speed", "practice", "focus", "accuracy", "skills",
+    "simple", "clear", "short", "long", "fast", "slow", "better", "best", "next", "last", "start", "finish", "ready", "wait", "again", "before", "during", "while", "between", "under",
+    "every", "each", "many", "much", "more", "less", "same", "different", "right", "left", "small", "large", "high", "low", "early", "late", "true", "false", "yes", "maybe",
+    "family", "friend", "home", "school", "office", "city", "road", "water", "food", "music", "book", "paper", "number", "letter", "word", "sentence", "space", "shift", "enter", "delete",
   ];
 
   const CUSTOM_PARAGRAPHS = [
@@ -374,6 +377,16 @@
     return isTyping && state.textMode === "custom";
   }
 
+  function buildWordStream(minLen = 6000) {
+    const parts = [];
+    let text = "";
+    while (text.length < minLen) {
+      parts.push(...shuffle(COMMON_WORDS));
+      text = parts.join(" ");
+    }
+    return text;
+  }
+
   function buildPassage() {
     if (usingCustomParagraph()) {
       const base = normalizeTypingText(CUSTOM_PARAGRAPHS[state.paragraphIndex]?.text || CUSTOM_PARAGRAPHS[0].text);
@@ -381,10 +394,8 @@
       while (text.length < 6000) text += " " + base;
       return text;
     }
-    const pool = shuffle(PASSAGES.map(normalizeTypingText));
-    let text = pool.join(" ");
-    while (text.length < 6000) text += " " + pick(pool);
-    return text;
+    // Random mode: LiveChat-style stream of common words (not full sentences).
+    return buildWordStream(6000);
   }
 
   function buildEntries(count) {
@@ -564,7 +575,7 @@
       statProgressLabel.textContent = "Answered";
     } else {
       setupTitle.textContent = "Typing speed test";
-      setupCopy.textContent = "Choose duration, then use Random text or Custom paragraph. The timer starts when you type the first character.";
+      setupCopy.textContent = "Random mode uses common English words (like LiveChat). Custom mode uses your chosen paragraph. Timer starts on the first key.";
       startBtn.textContent = "Start typing test";
       statWpmLabel.textContent = "WPM";
       statAccuracyLabel.textContent = "Accuracy";
@@ -641,16 +652,41 @@
     const chars = Array.from(state.target);
     const typed = Array.from(state.typed);
     let html = "";
+    let wordOpen = false;
+
     for (let i = 0; i < chars.length; i += 1) {
-      let cls = "ch";
-      if (i < typed.length) cls += charsMatch(typed[i], chars[i]) ? " is-ok" : " is-bad";
-      else if (i === typed.length) cls += " is-current";
       const ch = chars[i];
-      // Use a normal space so lines can wrap. &nbsp; forced one endless horizontal line.
-      html += `<span class="${cls}">${ch === " " ? " " : escapeHtml(ch)}</span>`;
+      const isSpace = ch === " ";
+
+      if (!isSpace && !wordOpen) {
+        // Mark word as current if caret is inside this word.
+        let caretInWord = false;
+        let j = i;
+        while (j < chars.length && chars[j] !== " ") {
+          if (j === typed.length) caretInWord = true;
+          j += 1;
+        }
+        html += `<span class="word${caretInWord ? " is-active-word" : ""}">`;
+        wordOpen = true;
+      }
+
+      if (isSpace && wordOpen) {
+        html += "</span>";
+        wordOpen = false;
+      }
+
+      let cls = "ch";
+      if (i < typed.length) cls += charsMatch(typed[i], ch) ? " is-ok" : " is-bad";
+      else if (i === typed.length) cls += " is-current";
+
+      html += isSpace
+        ? `<span class="${cls} ch-space"> </span>`
+        : `<span class="${cls}">${escapeHtml(ch)}</span>`;
     }
+    if (wordOpen) html += "</span>";
+
     textEl.innerHTML = html;
-    const current = textEl.querySelector(".is-current");
+    const current = textEl.querySelector(".is-current") || textEl.querySelector(".is-active-word");
     if (current && textEl.scrollHeight > textEl.clientHeight) {
       const top = current.offsetTop - textEl.clientHeight / 2;
       textEl.scrollTop = Math.max(0, top);
@@ -680,7 +716,7 @@
     if (typedChars.length >= targetChars.length - 80) {
       const extra = usingCustomParagraph()
         ? normalizeTypingText(CUSTOM_PARAGRAPHS[state.paragraphIndex].text)
-        : pick(PASSAGES.map(normalizeTypingText));
+        : buildWordStream(800);
       state.target += " " + extra;
       renderPassage();
     }
@@ -870,36 +906,48 @@
     }
 
     syncTypingScore();
-    const wpm = Math.round(state.correct / 5 / minutes);
+    const totalTyped = state.typed.length;
+    const typingMinutes = Math.max(state.durationSec / 60, elapsedMinutes());
+    // LiveChat-style: CPM includes mistakes; WPM = corrected CPM / 5.
+    const cpm = Math.round(totalTyped / typingMinutes);
+    const correctedCpm = Math.round(state.correct / typingMinutes);
+    const wpm = Math.round(correctedCpm / 5);
+    const accLabel = `${accuracy}%`;
 
-    let title = "Test complete";
-    if (accuracy >= 95 && wpm >= 40) title = "Excellent result";
-    else if (accuracy >= 90) title = "Strong accuracy";
-    else if (wpm >= 35) title = "Solid speed";
+    let title = "Typing Speed Test";
     resultsTitle.textContent = title;
+    resultsTitle.classList.add("entry-result-heading");
+    document.querySelector(".typing-results .typing-mode-tag")?.setAttribute("hidden", "");
 
-    // Correct chars and Typed both show complete correctly typed characters.
-    const completeChars = state.correct;
-    const cards = [
-      { label: "WPM", value: String(wpm) },
-      { label: "Accuracy", value: `${accuracy}%` },
-      { label: "Correct chars", value: String(completeChars) },
-      { label: "Errors", value: String(state.incorrect) },
-      { label: "Typed", value: String(completeChars) },
-      { label: "Duration", value: formatTime(state.durationSec) },
-    ];
-
+    const extraBits = [];
     if (usingCustomParagraph()) {
-      cards.push({ label: "Mode", value: "Custom" });
-      cards.push({ label: "Paragraph", value: String(state.paragraphIndex + 1) });
-      cards.push({ label: "Topic", value: CUSTOM_PARAGRAPHS[state.paragraphIndex]?.title || "-" });
-    } else if (isTyping) {
-      cards.push({ label: "Mode", value: "Random" });
+      extraBits.push(
+        `<div class="typing-result-card"><strong>Custom</strong><span>Mode</span></div>`,
+        `<div class="typing-result-card"><strong>${state.paragraphIndex + 1}</strong><span>Paragraph</span></div>`,
+        `<div class="typing-result-card"><strong>${escapeHtml(CUSTOM_PARAGRAPHS[state.paragraphIndex]?.title || "-")}</strong><span>Topic</span></div>`
+      );
+    } else {
+      extraBits.push(`<div class="typing-result-card"><strong>Random words</strong><span>Mode</span></div>`);
     }
 
-    resultGrid.innerHTML = cards
-      .map((card) => `<div class="typing-result-card"><strong>${escapeHtml(card.value)}</strong><span>${escapeHtml(card.label)}</span></div>`)
-      .join("");
+    resultGrid.className = "entry-result-layout";
+    resultGrid.innerHTML = `
+      <div class="entry-result-box">
+        <div class="entry-result-row"><span>Characters per minute (CPM)</span><strong>${cpm}</strong></div>
+        <div class="entry-result-row"><span>Words per minute (WPM)</span><strong>${wpm}</strong></div>
+        <div class="entry-result-row"><span>Accuracy</span><strong>${escapeHtml(accLabel)}</strong></div>
+      </div>
+      <p class="entry-result-note"><em>CPM also includes spaces and punctuation. WPM is always your corrected CPM divided by 5, this is an international standard.</em></p>
+      <h3 class="entry-result-conclusion-title">Conclusion</h3>
+      <p class="entry-result-conclusion">Your typing speed was measured as <strong>${cpm} CPM</strong> and your accuracy was <strong>${escapeHtml(accLabel)}</strong>.</p>
+      <div class="entry-result-extra">
+        <div class="typing-result-card"><strong>${state.correct}</strong><span>Correct chars</span></div>
+        <div class="typing-result-card"><strong>${state.incorrect}</strong><span>Errors</span></div>
+        <div class="typing-result-card"><strong>${state.correct}</strong><span>Typed</span></div>
+        <div class="typing-result-card"><strong>${formatTime(state.durationSec)}</strong><span>Duration</span></div>
+        ${extraBits.join("")}
+      </div>
+    `;
     show("results");
   }
 
