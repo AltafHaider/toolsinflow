@@ -3855,8 +3855,8 @@ html.pdf-plain-cursor textarea {
   margin: 0;
   cursor: text;
   font: inherit;
-  font-size: 1.15rem;
-  line-height: 1.75;
+  font-size: 1.45rem;
+  line-height: 1.8;
 }
 
 .typing-entry-wrap {
@@ -3938,8 +3938,8 @@ html.pdf-plain-cursor textarea {
   }
 
   .typing-text {
-    font-size: 1.05rem;
-    min-height: 160px;
+    font-size: 1.28rem;
+    min-height: 180px;
   }
 }
 
