@@ -3792,8 +3792,8 @@ html.pdf-plain-cursor textarea {
 }
 
 .typing-text {
-  min-height: 180px;
-  max-height: 280px;
+  min-height: 220px;
+  max-height: 360px;
   overflow: auto;
   padding: 1rem 1.05rem;
   border-radius: 14px;
@@ -3803,6 +3803,13 @@ html.pdf-plain-cursor textarea {
   line-height: 1.75;
   letter-spacing: 0.01em;
   color: color-mix(in srgb, var(--ink) 42%, var(--muted));
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.typing-text .ch {
+  white-space: pre-wrap;
 }
 
 .typing-text .ch.is-ok {
@@ -3828,25 +3835,31 @@ html.pdf-plain-cursor textarea {
   z-index: 2;
   width: 100%;
   height: 100%;
-  opacity: 1;
-  color: transparent;
-  caret-color: var(--accent);
-  background: transparent;
+  opacity: 0;
   resize: none;
   border: 0;
-  padding: 1rem 1.05rem;
+  padding: 0;
   margin: 0;
   cursor: text;
   font: inherit;
   font-size: 1.15rem;
   line-height: 1.75;
-  letter-spacing: 0.01em;
 }
 
 .typing-entry-wrap {
   display: flex;
   gap: 0.55rem;
   margin-bottom: 1rem;
+}
+
+.typing-entry-wrap[hidden],
+.typing-prompt-card[hidden],
+.typing-text-wrap[hidden],
+.mcq-wrap[hidden],
+.typing-paragraph-wrap[hidden],
+.typing-paragraph-preview[hidden],
+.typing-panel[hidden] {
+  display: none !important;
 }
 
 .typing-entry-input {

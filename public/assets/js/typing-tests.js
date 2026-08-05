@@ -308,12 +308,12 @@
     if (usingCustomParagraph()) {
       const base = normalizeTypingText(CUSTOM_PARAGRAPHS[state.paragraphIndex]?.text || CUSTOM_PARAGRAPHS[0].text);
       let text = base;
-      while (text.length < 1800) text += " " + base;
+      while (text.length < 6000) text += " " + base;
       return text;
     }
     const pool = shuffle(PASSAGES.map(normalizeTypingText));
     let text = pool.join(" ");
-    while (text.length < 2200) text += " " + pick(pool);
+    while (text.length < 6000) text += " " + pick(pool);
     return text;
   }
 
@@ -532,7 +532,8 @@
       if (i < typed.length) cls += charsMatch(typed[i], chars[i]) ? " is-ok" : " is-bad";
       else if (i === typed.length) cls += " is-current";
       const ch = chars[i];
-      html += `<span class="${cls}">${/\s/.test(ch) ? "&nbsp;" : escapeHtml(ch)}</span>`;
+      // Use a normal space so lines can wrap. &nbsp; forced one endless horizontal line.
+      html += `<span class="${cls}">${ch === " " ? " " : escapeHtml(ch)}</span>`;
     }
     textEl.innerHTML = html;
     const current = textEl.querySelector(".is-current");
@@ -567,7 +568,7 @@
     state.incorrect = incorrect;
     renderPassage();
     updateLiveStats();
-    if (typedChars.length >= targetChars.length) {
+    if (typedChars.length >= targetChars.length - 80) {
       const extra = usingCustomParagraph()
         ? normalizeTypingText(CUSTOM_PARAGRAPHS[state.paragraphIndex].text)
         : pick(PASSAGES.map(normalizeTypingText));
