@@ -3,7 +3,7 @@
   if (!app) return;
 
   const tool = app.dataset.tool || "typing-test";
-  const isCustom = tool === "custom-typing-test";
+  const isTyping = tool === "typing-test";
   const isEntry = tool === "data-entry-test";
   const isMixed = tool === "mixed-test";
 
@@ -15,6 +15,7 @@
   const durationWrap = document.getElementById("typingDurationWrap");
   const durationLabel = document.getElementById("typingDurationLabel");
   const durationsEl = document.getElementById("typingDurations");
+  const modeWrap = document.getElementById("typingModeWrap");
   const paragraphWrap = document.getElementById("typingParagraphWrap");
   const paragraphList = document.getElementById("typingParagraphList");
   const paragraphPreview = document.getElementById("typingParagraphPreview");
@@ -72,12 +73,16 @@
     { sec: 1800, label: "30 min" },
   ];
 
+  // Random-mode passages (different from the custom paragraph list).
   const PASSAGES = [
     "Practice makes progress. Keep your eyes on the next word, breathe evenly, and let your fingers find a steady rhythm. Accuracy first, then speed will follow as the patterns become familiar.",
     "Clear communication depends on careful typing. Check spelling, watch punctuation, and stay focused until the timer ends. Small improvements each day build lasting skill.",
     "Technology helps people work faster, but attention still matters. Type with intention, correct mistakes quickly, and finish strong without rushing into avoidable errors.",
     "A calm mind supports better results. Sit upright, relax your shoulders, and move through each sentence with confidence. Consistency beats bursts of speed that fade after a minute.",
     "Good habits create reliable performance. Warm up with short drills, review your accuracy, and challenge yourself with longer sessions when you are ready for more endurance.",
+    "Speed without control creates more corrections than progress. Train yourself to notice each space and capital letter. Clean text is easier to review and more useful in real work.",
+    "When the timer starts, resist the urge to glance at the clock every few seconds. Stay with the current sentence, finish the thought, and trust your pace to settle naturally.",
+    "Keyboard shortcuts save time after typing practice becomes comfortable. Learn a few useful combinations, keep wrists relaxed, and avoid slamming keys when you feel rushed.",
   ];
 
   const CUSTOM_PARAGRAPHS = [
@@ -205,6 +210,7 @@
 
   const state = {
     durationSec: isEntry ? 120 : isMixed ? 600 : 60,
+    textMode: "random", // typing-test only: random | custom
     paragraphIndex: 0,
     running: false,
     startedAt: 0,
@@ -275,8 +281,12 @@
       .replaceAll('"', "&quot;");
   }
 
+  function usingCustomParagraph() {
+    return isTyping && state.textMode === "custom";
+  }
+
   function buildPassage() {
-    if (isCustom) {
+    if (usingCustomParagraph()) {
       const base = CUSTOM_PARAGRAPHS[state.paragraphIndex]?.text || CUSTOM_PARAGRAPHS[0].text;
       let text = base;
       while (text.length < 1800) text += " " + base;
@@ -290,20 +300,31 @@
 
   function buildEntries(count) {
     const items = [];
+    const types = shuffle([
+      "name", "phone", "cnic", "amount", "code", "date", "city",
+      "email", "sku", "plate", "roll", "iban",
+    ]);
     for (let i = 0; i < count; i += 1) {
-      const roll = i % 7;
-      if (roll === 0) items.push({ label: "Full name", value: `${pick(FIRST_NAMES)} ${pick(LAST_NAMES)}` });
-      else if (roll === 1) items.push({ label: "Phone number", value: `03${randomDigits(2)}-${randomDigits(7)}` });
-      else if (roll === 2) items.push({ label: "CNIC / ID", value: `${randomDigits(5)}-${randomDigits(7)}-${randomDigits(1)}` });
-      else if (roll === 3) items.push({ label: "Amount", value: `${(100 + Math.floor(Math.random() * 9900)).toLocaleString("en-US")}.${randomDigits(2)}` });
-      else if (roll === 4) items.push({ label: "Account code", value: randomCode(3, 4) });
-      else if (roll === 5) {
+      const roll = types[i % types.length];
+      if (roll === "name") items.push({ label: "Full name", value: `${pick(FIRST_NAMES)} ${pick(LAST_NAMES)}` });
+      else if (roll === "phone") items.push({ label: "Phone number", value: `03${randomDigits(2)}-${randomDigits(7)}` });
+      else if (roll === "cnic") items.push({ label: "CNIC / ID", value: `${randomDigits(5)}-${randomDigits(7)}-${randomDigits(1)}` });
+      else if (roll === "amount") items.push({ label: "Amount (PKR)", value: `${(100 + Math.floor(Math.random() * 9900)).toLocaleString("en-US")}.${randomDigits(2)}` });
+      else if (roll === "code") items.push({ label: "Account code", value: randomCode(3, 4) });
+      else if (roll === "date") {
         const d = 1 + Math.floor(Math.random() * 28);
         const m = 1 + Math.floor(Math.random() * 12);
         items.push({ label: "Date", value: `${pad(m)}/${pad(d)}/2026` });
-      } else items.push({ label: "City + code", value: `${pick(CITIES)} ${randomCode(1, 5)}` });
+      } else if (roll === "email") {
+        const user = `${pick(FIRST_NAMES).toLowerCase()}.${pick(LAST_NAMES).toLowerCase()}${randomDigits(2)}`;
+        items.push({ label: "Email", value: `${user}@mail.test` });
+      } else if (roll === "sku") items.push({ label: "SKU", value: `SKU-${randomCode(1, 3)}-${randomDigits(4)}` });
+      else if (roll === "plate") items.push({ label: "Vehicle plate", value: `LE-${randomDigits(2)}-${randomDigits(4)}` });
+      else if (roll === "roll") items.push({ label: "Roll number", value: `R-${2026}${randomDigits(4)}` });
+      else if (roll === "iban") items.push({ label: "IBAN tail", value: `PK${randomDigits(2)}${randomCode(1, 4)}${randomDigits(8)}` });
+      else items.push({ label: "City + code", value: `${pick(CITIES)} ${randomCode(1, 5)}` });
     }
-    return items;
+    return shuffle(items);
   }
 
   function renderMcqImage(kind) {
@@ -355,14 +376,26 @@
     });
   }
 
+  function setTextMode(mode) {
+    state.textMode = mode === "custom" ? "custom" : "random";
+    modeWrap?.querySelectorAll(".typing-mode-btn").forEach((btn) => {
+      btn.classList.toggle("is-active", btn.dataset.mode === state.textMode);
+    });
+    setParagraphPicker();
+    startBtn.textContent = usingCustomParagraph() ? "Start with selected paragraph" : "Start typing test";
+  }
+
   function setParagraphPicker() {
-    if (!isCustom) {
+    if (!paragraphWrap) return;
+    if (!usingCustomParagraph()) {
       paragraphWrap.hidden = true;
       return;
     }
 
     paragraphWrap.hidden = false;
+    if (!paragraphList) return;
     paragraphList.innerHTML = "";
+
     CUSTOM_PARAGRAPHS.forEach((para, index) => {
       const btn = document.createElement("button");
       btn.type = "button";
@@ -387,7 +420,7 @@
 
   function updateParagraphPreview() {
     const para = CUSTOM_PARAGRAPHS[state.paragraphIndex];
-    if (!para) return;
+    if (!para || !paragraphPreview || !paragraphPreviewText) return;
     paragraphPreview.hidden = false;
     paragraphPreviewText.textContent = para.text;
   }
@@ -395,28 +428,21 @@
   function configureSetupCopy() {
     if (isEntry) {
       setupTitle.textContent = "120-second data entry";
-      setupCopy.textContent = "Type each value exactly as shown, then press Enter. Score is based on correct entries.";
-      startBtn.textContent = "Start 120s test";
+      setupCopy.textContent = "This is not a paragraph typing test. Retype each field value exactly, then press Enter.";
+      startBtn.textContent = "Start 120s data entry";
       statWpmLabel.textContent = "EPM";
       statAccuracyLabel.textContent = "Accuracy";
       statProgressLabel.textContent = "Correct";
     } else if (isMixed) {
       setupTitle.textContent = "Mixed aptitude test";
-      setupCopy.textContent = "English MCQs, Mathematics, image/pattern questions, and critical thinking — all in one timed test.";
-      startBtn.textContent = "Start mixed test";
+      setupCopy.textContent = "No typing here — answer MCQs from English, Math, image/pattern, and critical thinking.";
+      startBtn.textContent = "Start mixed MCQ test";
       statWpmLabel.textContent = "Score";
       statAccuracyLabel.textContent = "Accuracy";
       statProgressLabel.textContent = "Answered";
-    } else if (isCustom) {
-      setupTitle.textContent = "Custom typing test";
-      setupCopy.textContent = "Select any of the 20 paragraphs below, choose a duration, then start typing.";
-      startBtn.textContent = "Start with selected paragraph";
-      statWpmLabel.textContent = "WPM";
-      statAccuracyLabel.textContent = "Accuracy";
-      statProgressLabel.textContent = "Chars";
     } else {
       setupTitle.textContent = "Typing speed test";
-      setupCopy.textContent = "Choose a duration from 30 seconds to 30 minutes, then type the passage.";
+      setupCopy.textContent = "Choose duration, then use Random text or Custom paragraph (20 topics).";
       startBtn.textContent = "Start typing test";
       statWpmLabel.textContent = "WPM";
       statAccuracyLabel.textContent = "Accuracy";
@@ -492,7 +518,9 @@
     renderPassage();
     updateLiveStats();
     if (value.length >= state.target.length) {
-      state.target += " " + (isCustom ? CUSTOM_PARAGRAPHS[state.paragraphIndex].text : buildPassage());
+      state.target += " " + (usingCustomParagraph()
+        ? CUSTOM_PARAGRAPHS[state.paragraphIndex].text
+        : pick(PASSAGES));
       renderPassage();
     }
   }
@@ -651,12 +679,15 @@
           { label: "Correct chars", value: String(state.correct) },
           { label: "Errors", value: String(state.incorrect) },
           { label: "Typed", value: String(state.typed.length) },
-          { label: isCustom ? "Paragraph" : "Duration", value: isCustom ? String(state.paragraphIndex + 1) : formatTime(state.durationSec) },
+          { label: "Duration", value: formatTime(state.durationSec) },
         ];
 
-    if (isCustom) {
-      cards.push({ label: "Duration", value: formatTime(state.durationSec) });
+    if (usingCustomParagraph()) {
+      cards.push({ label: "Mode", value: "Custom" });
+      cards.push({ label: "Paragraph", value: String(state.paragraphIndex + 1) });
       cards.push({ label: "Topic", value: CUSTOM_PARAGRAPHS[state.paragraphIndex]?.title || "-" });
+    } else if (isTyping) {
+      cards.push({ label: "Mode", value: "Random" });
     }
 
     resultGrid.innerHTML = cards
@@ -674,7 +705,7 @@
   }
 
   function startTest() {
-    if (isCustom && state.paragraphIndex < 0) {
+    if (usingCustomParagraph() && (state.paragraphIndex < 0 || !CUSTOM_PARAGRAPHS[state.paragraphIndex])) {
       alert("Please select a paragraph first.");
       return;
     }
@@ -758,8 +789,13 @@
   restartBtn.addEventListener("click", startTest);
   againBtn.addEventListener("click", resetToSetup);
 
+  modeWrap?.querySelectorAll(".typing-mode-btn").forEach((btn) => {
+    btn.addEventListener("click", () => setTextMode(btn.dataset.mode));
+  });
+
   configureSetupCopy();
   setDurationButtons();
-  setParagraphPicker();
+  if (isTyping) setTextMode("random");
+  else if (paragraphWrap) paragraphWrap.hidden = true;
   show("setup");
 })();

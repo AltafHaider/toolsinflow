@@ -2,11 +2,11 @@
 declare(strict_types=1);
 /** @var string $id */
 $modeLabel = match ($id) {
-    'custom-typing-test' => 'Custom paragraph',
     'data-entry-test' => 'Data entry',
     'mixed-test' => 'Aptitude MCQs',
     default => 'Typing speed',
 };
+$isTyping = $id === 'typing-test';
 $isMixed = $id === 'mixed-test';
 ?>
 <main class="container typing-shell" id="typingApp" data-tool="<?= cz_h($id) ?>">
@@ -17,10 +17,19 @@ $isMixed = $id === 'mixed-test';
       <p class="typing-setup-copy" id="typingSetupCopy">Pick a duration, then start typing.</p>
     </div>
 
+    <?php if ($isTyping): ?>
+    <div class="typing-mode-wrap" id="typingModeWrap">
+      <span class="typing-label">Text source</span>
+      <div class="typing-modes" id="typingModes" role="group" aria-label="Text source">
+        <button type="button" class="typing-mode-btn is-active" data-mode="random">Random text</button>
+        <button type="button" class="typing-mode-btn" data-mode="custom">Custom paragraph</button>
+      </div>
+    </div>
+
     <div class="typing-paragraph-wrap" id="typingParagraphWrap" hidden>
       <div class="typing-paragraph-head">
         <span class="typing-label">Choose a paragraph</span>
-        <span class="typing-paragraph-count" id="typingParagraphCount">20 options</span>
+        <span class="typing-paragraph-count">20 options</span>
       </div>
       <div class="typing-paragraph-list" id="typingParagraphList" role="listbox" aria-label="Paragraphs"></div>
       <div class="typing-paragraph-preview" id="typingParagraphPreview" hidden>
@@ -28,6 +37,14 @@ $isMixed = $id === 'mixed-test';
         <p id="typingParagraphPreviewText"></p>
       </div>
     </div>
+    <?php else: ?>
+    <div class="typing-paragraph-wrap" id="typingParagraphWrap" hidden>
+      <div class="typing-paragraph-list" id="typingParagraphList"></div>
+      <div class="typing-paragraph-preview" id="typingParagraphPreview" hidden>
+        <p id="typingParagraphPreviewText"></p>
+      </div>
+    </div>
+    <?php endif; ?>
 
     <div class="typing-duration-wrap" id="typingDurationWrap">
       <span class="typing-label" id="typingDurationLabel">Duration</span>

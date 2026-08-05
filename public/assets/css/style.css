@@ -4074,3 +4074,35 @@ html.pdf-plain-cursor textarea {
     max-height: 240px;
   }
 }
+
+.typing-mode-wrap {
+  margin-bottom: 1.1rem;
+}
+
+.typing-modes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.typing-mode-btn {
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--ink);
+  border-radius: 999px;
+  padding: 0.5rem 0.95rem;
+  font: inherit;
+  font-weight: 700;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.typing-mode-btn:hover {
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+}
+
+.typing-mode-btn.is-active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-ink);
+}

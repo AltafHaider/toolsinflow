@@ -132,22 +132,17 @@ return [
         ],
         'typing-test' => [
             'name' => 'Typing Test',
-            'desc' => 'Check your typing speed and accuracy. Choose 30 seconds up to 30 minutes.',
-            'cat'  => 'test',
-        ],
-        'custom-typing-test' => [
-            'name' => 'Custom Typing Test',
-            'desc' => 'Pick from 20 different paragraphs and practice typing at your chosen duration.',
+            'desc' => 'Timed typing speed test. Use random text or pick from 20 custom paragraphs.',
             'cat'  => 'test',
         ],
         'data-entry-test' => [
             'name' => 'Data Entry Test',
-            'desc' => '120-second aptitude-style data entry test with codes, names, phones, and amounts.',
+            'desc' => '120-second aptitude data entry: names, phones, IDs, amounts, and codes.',
             'cat'  => 'test',
         ],
         'mixed-test' => [
             'name' => 'Mixed Test',
-            'desc' => 'Aptitude-style MCQs: English, Mathematics, image/pattern questions, and critical thinking.',
+            'desc' => 'Aptitude MCQs only: English, Mathematics, image/pattern, and critical thinking.',
             'cat'  => 'test',
         ],
     ],

@@ -119,7 +119,6 @@ function cz_tool_icon(string $id): string
         'blur-faces' => '<circle cx="12" cy="9.5" r="3.2"/><path d="M6 19a6 6 0 0112 0"/><path d="M5 8.5h2.2M16.8 8.5H19M8.2 5.8l1.3 1.3M15.8 5.8l-1.3 1.3"/>',
         'images-to-pdf' => '<path d="M7 3h8l4 4v14H7z"/><path d="M15 3v4h4M9 12h6M9 15h6M9 18h4"/>',
         'typing-test' => '<rect x="3" y="5" width="18" height="12" rx="2"/><path d="M7 20h10M12 17v3"/><path d="M7 9h2M11 9h2M15 9h2M8 12h8"/>',
-        'custom-typing-test' => '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 8h10M7 12h10M7 16h6"/><path d="M17 15l1.5 1.5L21 14"/>',
         'data-entry-test' => '<rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/><circle cx="16.5" cy="16" r="1.2"/>',
         'mixed-test' => '<circle cx="8" cy="8" r="3"/><rect x="13" y="5" width="7" height="6" rx="1"/><path d="M4 16h7M4 19h5M14 15l3 3 4-5"/>',
     ];
@@ -171,7 +170,7 @@ function cz_render_head(string $title, string $description, string $path = '/', 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Urbanist:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="<?= $assetBase ?>/css/style.css?v=77" />
+  <link rel="stylesheet" href="<?= $assetBase ?>/css/style.css?v=78" />
   <link rel="preconnect" href="https://images.unsplash.com" crossorigin />
   <script type="application/ld+json">
   <?= json_encode([
