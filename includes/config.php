@@ -135,6 +135,11 @@ return [
             'desc' => 'Check your typing speed and accuracy. Choose 30 seconds up to 30 minutes.',
             'cat'  => 'test',
         ],
+        'custom-typing-test' => [
+            'name' => 'Custom Typing Test',
+            'desc' => 'Pick from 20 different paragraphs and practice typing at your chosen duration.',
+            'cat'  => 'test',
+        ],
         'data-entry-test' => [
             'name' => 'Data Entry Test',
             'desc' => '120-second aptitude-style data entry test with codes, names, phones, and amounts.',
@@ -142,7 +147,7 @@ return [
         ],
         'mixed-test' => [
             'name' => 'Mixed Test',
-            'desc' => 'Practice words, numbers, and codes together — a mixed typing and data challenge.',
+            'desc' => 'Aptitude-style MCQs: English, Mathematics, image/pattern questions, and critical thinking.',
             'cat'  => 'test',
         ],
     ],

@@ -3908,3 +3908,169 @@ html.pdf-plain-cursor textarea {
     min-height: 160px;
   }
 }
+
+/* Custom paragraph picker + aptitude MCQs */
+.typing-paragraph-wrap {
+  margin-bottom: 1.2rem;
+}
+
+.typing-paragraph-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.55rem;
+}
+
+.typing-paragraph-count {
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.typing-paragraph-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.55rem;
+  max-height: 280px;
+  overflow: auto;
+  padding: 0.15rem;
+  margin-bottom: 0.75rem;
+}
+
+.typing-paragraph-item {
+  text-align: left;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--ink);
+  border-radius: 12px;
+  padding: 0.7rem 0.8rem;
+  cursor: pointer;
+  font: inherit;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.typing-paragraph-item strong {
+  display: block;
+  margin-bottom: 0.2rem;
+  font-size: 0.92rem;
+}
+
+.typing-paragraph-item span {
+  display: block;
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+
+.typing-paragraph-item:hover {
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+}
+
+.typing-paragraph-item.is-active {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 10%, var(--surface));
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 18%, transparent);
+}
+
+.typing-paragraph-preview {
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--accent) 6%, var(--surface));
+  border-radius: 12px;
+  padding: 0.85rem 1rem;
+  margin-bottom: 0.35rem;
+}
+
+.typing-paragraph-preview p {
+  margin: 0.35rem 0 0;
+  color: var(--ink);
+  line-height: 1.55;
+  font-size: 0.95rem;
+}
+
+.mcq-wrap {
+  margin-bottom: 1rem;
+}
+
+.mcq-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
+.mcq-cat {
+  color: var(--accent);
+}
+
+.mcq-count {
+  color: var(--muted);
+}
+
+.mcq-image {
+  display: grid;
+  place-items: center;
+  margin-bottom: 0.85rem;
+  padding: 0.85rem;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--ink);
+}
+
+.mcq-image svg {
+  width: min(100%, 320px);
+  height: auto;
+}
+
+.mcq-question {
+  margin: 0 0 0.9rem;
+  font-size: 1.12rem;
+  line-height: 1.45;
+  color: var(--ink);
+}
+
+.mcq-options {
+  display: grid;
+  gap: 0.55rem;
+  margin-bottom: 0.95rem;
+}
+
+.mcq-option {
+  text-align: left;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--ink);
+  border-radius: 12px;
+  padding: 0.8rem 0.95rem;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.mcq-option:hover {
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+}
+
+.mcq-option.is-selected {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, var(--surface));
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 16%, transparent);
+}
+
+.mcq-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  margin-bottom: 0.35rem;
+}
+
+@media (max-width: 720px) {
+  .typing-paragraph-list {
+    grid-template-columns: 1fr;
+    max-height: 240px;
+  }
+}

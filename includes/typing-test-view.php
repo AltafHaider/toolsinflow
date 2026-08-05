@@ -2,10 +2,12 @@
 declare(strict_types=1);
 /** @var string $id */
 $modeLabel = match ($id) {
+    'custom-typing-test' => 'Custom paragraph',
     'data-entry-test' => 'Data entry',
-    'mixed-test' => 'Mixed challenge',
+    'mixed-test' => 'Aptitude MCQs',
     default => 'Typing speed',
 };
+$isMixed = $id === 'mixed-test';
 ?>
 <main class="container typing-shell" id="typingApp" data-tool="<?= cz_h($id) ?>">
   <section class="typing-panel" id="typingSetup">
@@ -15,8 +17,20 @@ $modeLabel = match ($id) {
       <p class="typing-setup-copy" id="typingSetupCopy">Pick a duration, then start typing.</p>
     </div>
 
+    <div class="typing-paragraph-wrap" id="typingParagraphWrap" hidden>
+      <div class="typing-paragraph-head">
+        <span class="typing-label">Choose a paragraph</span>
+        <span class="typing-paragraph-count" id="typingParagraphCount">20 options</span>
+      </div>
+      <div class="typing-paragraph-list" id="typingParagraphList" role="listbox" aria-label="Paragraphs"></div>
+      <div class="typing-paragraph-preview" id="typingParagraphPreview" hidden>
+        <span class="typing-label">Preview</span>
+        <p id="typingParagraphPreviewText"></p>
+      </div>
+    </div>
+
     <div class="typing-duration-wrap" id="typingDurationWrap">
-      <span class="typing-label">Duration</span>
+      <span class="typing-label" id="typingDurationLabel">Duration</span>
       <div class="typing-durations" id="typingDurations" role="group" aria-label="Test duration"></div>
     </div>
 
@@ -35,7 +49,7 @@ $modeLabel = match ($id) {
       </div>
       <div class="typing-stat">
         <strong id="statAccuracy">100%</strong>
-        <span>Accuracy</span>
+        <span id="statAccuracyLabel">Accuracy</span>
       </div>
       <div class="typing-stat">
         <strong id="statProgress">0</strong>
@@ -48,7 +62,7 @@ $modeLabel = match ($id) {
       <p class="typing-prompt-value" id="typingPromptValue"></p>
     </div>
 
-    <div class="typing-text-wrap" id="typingTextWrap">
+    <div class="typing-text-wrap" id="typingTextWrap"<?= $isMixed ? ' hidden' : '' ?>>
       <div class="typing-text" id="typingText" aria-hidden="true"></div>
       <textarea
         class="typing-input"
@@ -74,6 +88,20 @@ $modeLabel = match ($id) {
         placeholder="Type here, then press Enter"
       />
       <button type="button" class="ghost" id="typingSkipBtn">Skip</button>
+    </div>
+
+    <div class="mcq-wrap" id="mcqWrap"<?= $isMixed ? '' : ' hidden' ?>>
+      <div class="mcq-meta">
+        <span class="mcq-cat" id="mcqCat">English</span>
+        <span class="mcq-count" id="mcqCount">Question 1 / 20</span>
+      </div>
+      <div class="mcq-image" id="mcqImage" hidden></div>
+      <h3 class="mcq-question" id="mcqQuestion"></h3>
+      <div class="mcq-options" id="mcqOptions" role="group" aria-label="Answer options"></div>
+      <div class="mcq-nav">
+        <button type="button" class="ghost" id="mcqSkipBtn">Skip</button>
+        <button type="button" class="primary" id="mcqNextBtn" disabled>Next</button>
+      </div>
     </div>
 
     <div class="typing-run-actions">

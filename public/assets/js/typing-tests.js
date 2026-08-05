@@ -3,6 +3,9 @@
   if (!app) return;
 
   const tool = app.dataset.tool || "typing-test";
+  const isCustom = tool === "custom-typing-test";
+  const isEntry = tool === "data-entry-test";
+  const isMixed = tool === "mixed-test";
 
   const setupEl = document.getElementById("typingSetup");
   const runEl = document.getElementById("typingRun");
@@ -10,7 +13,12 @@
   const setupTitle = document.getElementById("typingSetupTitle");
   const setupCopy = document.getElementById("typingSetupCopy");
   const durationWrap = document.getElementById("typingDurationWrap");
+  const durationLabel = document.getElementById("typingDurationLabel");
   const durationsEl = document.getElementById("typingDurations");
+  const paragraphWrap = document.getElementById("typingParagraphWrap");
+  const paragraphList = document.getElementById("typingParagraphList");
+  const paragraphPreview = document.getElementById("typingParagraphPreview");
+  const paragraphPreviewText = document.getElementById("typingParagraphPreviewText");
   const startBtn = document.getElementById("typingStartBtn");
   const restartBtn = document.getElementById("typingRestartBtn");
   const againBtn = document.getElementById("typingAgainBtn");
@@ -20,6 +28,7 @@
   const statWpm = document.getElementById("statWpm");
   const statWpmLabel = document.getElementById("statWpmLabel");
   const statAccuracy = document.getElementById("statAccuracy");
+  const statAccuracyLabel = document.getElementById("statAccuracyLabel");
   const statProgress = document.getElementById("statProgress");
   const statProgressLabel = document.getElementById("statProgressLabel");
 
@@ -34,6 +43,15 @@
   const resultGrid = document.getElementById("typingResultGrid");
   const resultsTitle = document.getElementById("resultsTitle");
 
+  const mcqWrap = document.getElementById("mcqWrap");
+  const mcqCat = document.getElementById("mcqCat");
+  const mcqCount = document.getElementById("mcqCount");
+  const mcqImage = document.getElementById("mcqImage");
+  const mcqQuestion = document.getElementById("mcqQuestion");
+  const mcqOptions = document.getElementById("mcqOptions");
+  const mcqNextBtn = document.getElementById("mcqNextBtn");
+  const mcqSkipBtn = document.getElementById("mcqSkipBtn");
+
   const TYPING_DURATIONS = [
     { sec: 30, label: "30 sec" },
     { sec: 60, label: "1 min" },
@@ -46,6 +64,14 @@
     { sec: 1800, label: "30 min" },
   ];
 
+  const MIXED_DURATIONS = [
+    { sec: 300, label: "5 min" },
+    { sec: 600, label: "10 min" },
+    { sec: 900, label: "15 min" },
+    { sec: 1200, label: "20 min" },
+    { sec: 1800, label: "30 min" },
+  ];
+
   const PASSAGES = [
     "Practice makes progress. Keep your eyes on the next word, breathe evenly, and let your fingers find a steady rhythm. Accuracy first, then speed will follow as the patterns become familiar.",
     "Clear communication depends on careful typing. Check spelling, watch punctuation, and stay focused until the timer ends. Small improvements each day build lasting skill.",
@@ -54,23 +80,132 @@
     "Good habits create reliable performance. Warm up with short drills, review your accuracy, and challenge yourself with longer sessions when you are ready for more endurance.",
   ];
 
-  const MIXED_CHUNKS = [
-    "Order ID A7K- ob91 must ship by 14:30 with invoice #88421.",
-    "Call 0300-4567891 and confirm code XR52-PL88 before 5 PM.",
-    "Amount due: Rs 12,450.75 for account PK29-7781-3340.",
-    "Enter SKU MTR-4402 qty 36 batch LOT9C and seal REF-Q17.",
-    "Password hint: Blue7!river and PIN 492183 for vault B-12.",
-    "Track parcel TN8849201 from Karachi to Lahore via route R-6.",
-    "Employee #E1042 worked 7.5 hours on 03/18/2026 shift A.",
-    "Mix letters and digits: a9B2 c4D8 e1F6 g3H0 i5J7 k2L9.",
+  const CUSTOM_PARAGRAPHS = [
+    { title: "Morning routine", text: "Every morning begins with a quiet plan. Drink water, stretch lightly, and write three goals for the day. A simple routine reduces stress and helps you start with clear focus before emails and meetings fill the calendar." },
+    { title: "City library", text: "The old city library smells of paper and wood polish. Students fill the long tables near the windows, while visitors whisper between tall shelves. Outside, buses pass, but inside time seems slower and kinder to careful reading." },
+    { title: "Market visit", text: "At the fruit market, vendors arrange bright oranges in neat rows. Customers compare prices, ask for fresh boxes, and carry heavy bags toward waiting rickshaws. The air is sweet, crowded, and full of quick conversations." },
+    { title: "Team project", text: "Successful teams share updates early and solve problems together. Assign roles clearly, set deadlines that people can meet, and review progress twice a week. Honest feedback saves time and builds trust across the group." },
+    { title: "Digital skills", text: "Learning digital skills opens doors in almost every career. Practice typing, spreadsheets, and clear email writing. Small daily lessons compound into confidence, and confidence makes new software feel less intimidating." },
+    { title: "River walk", text: "Along the river path, cyclists glide past joggers and families. Willow branches lean toward the water as ducks drift in quiet circles. Evening light turns the surface gold and invites a slower walk home." },
+    { title: "Office etiquette", text: "Good office etiquette is mostly consideration. Arrive prepared, keep shared spaces tidy, and reply to messages within a reasonable time. Courtesy costs little, yet it improves the mood of an entire workplace." },
+    { title: "Science fair", text: "The school science fair turned the hall into a maze of posters and models. One booth explained water filters; another showed a tiny robot following a black line. Judges asked short questions and smiled at creative answers." },
+    { title: "Travel tips", text: "Before a long trip, pack light and label your bags. Keep documents in one safe place, charge your phone fully, and note emergency contacts. Calm preparation turns travel delays into manageable pauses rather than crises." },
+    { title: "Healthy habits", text: "Health grows from ordinary choices repeated often. Sleep enough, walk after meals, and choose water more than sugary drinks. You do not need perfection; you need steady habits that your future self will thank you for." },
+    { title: "Customer service", text: "Excellent customer service starts with listening. Let the person finish, confirm the issue in simple words, and offer a clear next step. A respectful tone can turn a complaint into a lasting relationship." },
+    { title: "Garden care", text: "A small garden rewards patience. Water early, remove weeds before they spread, and give each plant enough space. After rain, the soil darkens and the leaves shine, reminding you that care always shows." },
+    { title: "Public speaking", text: "Public speaking improves with rehearsal. Know your opening line, pause after key points, and look at the audience rather than your notes. Nervous energy can become useful energy when you breathe and begin." },
+    { title: "Online learning", text: "Online courses work best with a schedule. Mute distractions, take notes by hand when possible, and review one lesson before starting the next. Progress feels faster when study sessions stay short and consistent." },
+    { title: "Bank visit", text: "Inside the bank, people wait in a quiet line holding forms and tokens. Counters open one by one, printers hum, and staff verify signatures carefully. Accuracy matters more than speed when money and records are involved." },
+    { title: "Rainy afternoon", text: "Rain taps the windows and softens the noise of the street. Cups of tea appear on desks, umbrellas drip in the hallway, and plans change without much argument. A rainy afternoon is perfect for unfinished reading." },
+    { title: "Job interview", text: "Prepare for an interview by researching the company and practicing clear examples. Dress neatly, arrive early, and answer with honesty. When you do not know something, say so and explain how you would find out." },
+    { title: "Community cleanup", text: "Neighbors gathered early for the community cleanup. Gloves, bags, and brooms were shared along the roadside. By noon the litter was gone, the park looked brighter, and everyone felt proud of a job done together." },
+    { title: "Time management", text: "Time management is choosing what matters most. List tasks, block deep-work hours, and protect short breaks. When interruptions arrive, note them and return to the plan instead of chasing every new request." },
+    { title: "Night study", text: "Night study can work if you keep it disciplined. Dim harsh lights, silence notifications, and set a stopping time. Review summaries before sleep so your mind continues organizing ideas while you rest." },
   ];
 
   const FIRST_NAMES = ["Ayesha", "Hassan", "Fatima", "Omar", "Zainab", "Bilal", "Sana", "Usman", "Maryam", "Ali", "Noor", "Hamza", "Sara", "Imran", "Hina"];
   const LAST_NAMES = ["Khan", "Ahmed", "Ali", "Hussain", "Raza", "Malik", "Sheikh", "Iqbal", "Farooq", "Qureshi", "Siddiqui", "Butt"];
   const CITIES = ["Karachi", "Lahore", "Islamabad", "Peshawar", "Quetta", "Multan", "Faisalabad", "Rawalpindi", "Sialkot", "Hyderabad"];
 
+  const MCQ_BANK = [
+    // English
+    { cat: "English", q: "Choose the correct spelling.", options: ["Accomodation", "Accommodation", "Acommodation", "Accomadation"], answer: 1 },
+    { cat: "English", q: "Synonym of \"rapid\" is:", options: ["Slow", "Quick", "Heavy", "Quiet"], answer: 1 },
+    { cat: "English", q: "Antonym of \"scarce\" is:", options: ["Rare", "Limited", "Abundant", "Tiny"], answer: 2 },
+    { cat: "English", q: "Fill in the blank: She ____ to school every day.", options: ["go", "goes", "going", "gone"], answer: 1 },
+    { cat: "English", q: "Which sentence is grammatically correct?", options: ["He don't like tea.", "He doesn't likes tea.", "He doesn't like tea.", "He not like tea."], answer: 2 },
+    { cat: "English", q: "\"Benevolent\" most nearly means:", options: ["Angry", "Kind", "Confused", "Lazy"], answer: 1 },
+    { cat: "English", q: "Choose the correct article: ____ honest man.", options: ["A", "An", "The", "No article"], answer: 1 },
+    { cat: "English", q: "Plural of \"crisis\" is:", options: ["Crisises", "Crisis", "Crises", "Crisies"], answer: 2 },
+    { cat: "English", q: "Identify the noun in: \"Courage wins respect.\"", options: ["Wins", "Courage", "Respectfully", "The"], answer: 1 },
+    { cat: "English", q: "Which word is a verb?", options: ["Beautiful", "Happiness", "Decide", "Quickly"], answer: 2 },
+
+    // Mathematics
+    { cat: "Mathematics", q: "What is 15% of 200?", options: ["20", "25", "30", "35"], answer: 2 },
+    { cat: "Mathematics", q: "Simplify: 8 × (3 + 2) − 6", options: ["34", "40", "28", "30"], answer: 0 },
+    { cat: "Mathematics", q: "If a train travels 90 km in 1.5 hours, its speed is:", options: ["45 km/h", "55 km/h", "60 km/h", "75 km/h"], answer: 2 },
+    { cat: "Mathematics", q: "Average of 10, 20, 30, 40 is:", options: ["20", "25", "30", "35"], answer: 1 },
+    { cat: "Mathematics", q: "Square root of 144 is:", options: ["10", "11", "12", "14"], answer: 2 },
+    { cat: "Mathematics", q: "Solve: 3x = 27. What is x?", options: ["6", "7", "8", "9"], answer: 3 },
+    { cat: "Mathematics", q: "A shop gives 10% discount on 500. Sale price is:", options: ["450", "460", "480", "490"], answer: 0 },
+    { cat: "Mathematics", q: "LCM of 4 and 6 is:", options: ["8", "10", "12", "24"], answer: 2 },
+    { cat: "Mathematics", q: "If 5 pens cost 40, one pen costs:", options: ["6", "7", "8", "9"], answer: 2 },
+    { cat: "Mathematics", q: "Perimeter of a square with side 9 is:", options: ["18", "27", "36", "81"], answer: 2 },
+
+    // Image / pattern (SVG visuals)
+    {
+      cat: "Image / Pattern",
+      q: "How many triangles are clearly shown in the figure?",
+      image: "triangles",
+      options: ["2", "3", "4", "5"],
+      answer: 1,
+    },
+    {
+      cat: "Image / Pattern",
+      q: "Which shape is different from the others?",
+      image: "odd-shape",
+      options: ["Circle A", "Circle B", "Square C", "Circle D"],
+      answer: 2,
+    },
+    {
+      cat: "Image / Pattern",
+      q: "What comes next in the sequence?",
+      image: "seq-dots",
+      options: ["1 dot", "4 dots", "5 dots", "6 dots"],
+      answer: 2,
+    },
+    {
+      cat: "Image / Pattern",
+      q: "Count the shaded squares.",
+      image: "shaded",
+      options: ["2", "3", "4", "5"],
+      answer: 2,
+    },
+    {
+      cat: "Image / Pattern",
+      q: "Which arrow points in a different direction?",
+      image: "arrows",
+      options: ["Arrow 1", "Arrow 2", "Arrow 3", "Arrow 4"],
+      answer: 2,
+    },
+    {
+      cat: "Image / Pattern",
+      q: "Find the missing number in the pattern shown.",
+      image: "num-circle",
+      options: ["8", "9", "10", "12"],
+      answer: 1,
+    },
+    {
+      cat: "Image / Pattern",
+      q: "Which figure completes the set (all have 3 sides)?",
+      image: "polygon-set",
+      options: ["Circle", "Triangle", "Square", "Pentagon"],
+      answer: 1,
+    },
+    {
+      cat: "Image / Pattern",
+      q: "How many circles appear in the image?",
+      image: "circles",
+      options: ["3", "4", "5", "6"],
+      answer: 2,
+    },
+
+    // Critical thinking
+    { cat: "Critical Thinking", q: "All roses are flowers. Some flowers fade quickly. Which statement must be true?", options: ["All roses fade quickly.", "Some roses may fade quickly.", "No rose is a flower.", "Flowers are never roses."], answer: 1 },
+    { cat: "Critical Thinking", q: "If today is Monday, what day was it 3 days ago?", options: ["Thursday", "Friday", "Saturday", "Sunday"], answer: 1 },
+    { cat: "Critical Thinking", q: "A is taller than B. B is taller than C. Who is shortest?", options: ["A", "B", "C", "Cannot say"], answer: 2 },
+    { cat: "Critical Thinking", q: "Find the odd one out: Apple, Banana, Carrot, Mango", options: ["Apple", "Banana", "Carrot", "Mango"], answer: 2 },
+    { cat: "Critical Thinking", q: "If all pencils are made of wood, and this object is a pencil, then:", options: ["It may be plastic.", "It is made of wood.", "It is an eraser.", "It cannot write."], answer: 1 },
+    { cat: "Critical Thinking", q: "Series: 2, 4, 8, 16, ?", options: ["18", "24", "32", "30"], answer: 2 },
+    { cat: "Critical Thinking", q: "If BOOK is coded as CPPL, then PEN is:", options: ["QFO", "QDO", "ODM", "QFP"], answer: 0 },
+    { cat: "Critical Thinking", q: "Which assumption is needed? \"Buy this medicine to get well soon.\"", options: ["The medicine is free.", "The medicine can help recovery.", "All illnesses need surgery.", "Doctors are unavailable."], answer: 1 },
+    { cat: "Critical Thinking", q: "Statement: Only trained staff may enter. Ali is trained. Conclusion:", options: ["Ali must enter.", "Ali may enter.", "Ali cannot enter.", "No one may enter."], answer: 1 },
+    { cat: "Critical Thinking", q: "If 1=3, 2=3, 3=5, 4=4, 5=4, then 6=?", options: ["3", "4", "5", "6"], answer: 0 },
+  ];
+
   const state = {
-    durationSec: tool === "data-entry-test" ? 120 : 60,
+    durationSec: isEntry ? 120 : isMixed ? 600 : 60,
+    paragraphIndex: 0,
     running: false,
     startedAt: 0,
     endsAt: 0,
@@ -84,6 +219,13 @@
     entryCorrect: 0,
     entryWrong: 0,
     entrySkipped: 0,
+    questions: [],
+    qIndex: 0,
+    selectedOption: null,
+    mcqCorrect: 0,
+    mcqWrong: 0,
+    mcqSkipped: 0,
+    byCat: {},
   };
 
   function shuffle(list) {
@@ -125,9 +267,20 @@
     return parts.join("-");
   }
 
-  function buildPassage(kind) {
-    if (kind === "mixed") {
-      return shuffle(MIXED_CHUNKS).concat(shuffle(MIXED_CHUNKS)).join(" ");
+  function escapeHtml(value) {
+    return String(value)
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;");
+  }
+
+  function buildPassage() {
+    if (isCustom) {
+      const base = CUSTOM_PARAGRAPHS[state.paragraphIndex]?.text || CUSTOM_PARAGRAPHS[0].text;
+      let text = base;
+      while (text.length < 1800) text += " " + base;
+      return text;
     }
     const pool = shuffle(PASSAGES);
     let text = pool.join(" ");
@@ -139,25 +292,32 @@
     const items = [];
     for (let i = 0; i < count; i += 1) {
       const roll = i % 7;
-      if (roll === 0) {
-        items.push({ label: "Full name", value: `${pick(FIRST_NAMES)} ${pick(LAST_NAMES)}` });
-      } else if (roll === 1) {
-        items.push({ label: "Phone number", value: `03${randomDigits(2)}-${randomDigits(7)}` });
-      } else if (roll === 2) {
-        items.push({ label: "CNIC / ID", value: `${randomDigits(5)}-${randomDigits(7)}-${randomDigits(1)}` });
-      } else if (roll === 3) {
-        items.push({ label: "Amount", value: `${(100 + Math.floor(Math.random() * 9900)).toLocaleString("en-US")}.${randomDigits(2)}` });
-      } else if (roll === 4) {
-        items.push({ label: "Account code", value: randomCode(3, 4) });
-      } else if (roll === 5) {
+      if (roll === 0) items.push({ label: "Full name", value: `${pick(FIRST_NAMES)} ${pick(LAST_NAMES)}` });
+      else if (roll === 1) items.push({ label: "Phone number", value: `03${randomDigits(2)}-${randomDigits(7)}` });
+      else if (roll === 2) items.push({ label: "CNIC / ID", value: `${randomDigits(5)}-${randomDigits(7)}-${randomDigits(1)}` });
+      else if (roll === 3) items.push({ label: "Amount", value: `${(100 + Math.floor(Math.random() * 9900)).toLocaleString("en-US")}.${randomDigits(2)}` });
+      else if (roll === 4) items.push({ label: "Account code", value: randomCode(3, 4) });
+      else if (roll === 5) {
         const d = 1 + Math.floor(Math.random() * 28);
         const m = 1 + Math.floor(Math.random() * 12);
         items.push({ label: "Date", value: `${pad(m)}/${pad(d)}/2026` });
-      } else {
-        items.push({ label: "City + code", value: `${pick(CITIES)} ${randomCode(1, 5)}` });
-      }
+      } else items.push({ label: "City + code", value: `${pick(CITIES)} ${randomCode(1, 5)}` });
     }
     return items;
+  }
+
+  function renderMcqImage(kind) {
+    const svgs = {
+      triangles: `<svg viewBox="0 0 220 120" xmlns="http://www.w3.org/2000/svg"><polygon points="40,100 110,20 180,100" fill="none" stroke="currentColor" stroke-width="3"/><polygon points="70,100 110,45 150,100" fill="none" stroke="currentColor" stroke-width="3"/><polygon points="90,100 110,70 130,100" fill="none" stroke="currentColor" stroke-width="3"/></svg>`,
+      "odd-shape": `<svg viewBox="0 0 260 100" xmlns="http://www.w3.org/2000/svg"><circle cx="35" cy="50" r="22" fill="none" stroke="currentColor" stroke-width="3"/><text x="35" y="55" text-anchor="middle" font-size="14" fill="currentColor">A</text><circle cx="95" cy="50" r="22" fill="none" stroke="currentColor" stroke-width="3"/><text x="95" y="55" text-anchor="middle" font-size="14" fill="currentColor">B</text><rect x="138" y="28" width="44" height="44" fill="none" stroke="currentColor" stroke-width="3"/><text x="160" y="55" text-anchor="middle" font-size="14" fill="currentColor">C</text><circle cx="225" cy="50" r="22" fill="none" stroke="currentColor" stroke-width="3"/><text x="225" y="55" text-anchor="middle" font-size="14" fill="currentColor">D</text></svg>`,
+      "seq-dots": `<svg viewBox="0 0 280 90" xmlns="http://www.w3.org/2000/svg"><circle cx="30" cy="45" r="6" fill="currentColor"/><circle cx="90" cy="30" r="6" fill="currentColor"/><circle cx="90" cy="60" r="6" fill="currentColor"/><circle cx="150" cy="20" r="6" fill="currentColor"/><circle cx="150" cy="45" r="6" fill="currentColor"/><circle cx="150" cy="70" r="6" fill="currentColor"/><circle cx="210" cy="15" r="6" fill="currentColor"/><circle cx="210" cy="35" r="6" fill="currentColor"/><circle cx="210" cy="55" r="6" fill="currentColor"/><circle cx="210" cy="75" r="6" fill="currentColor"/><text x="250" y="50" font-size="28" fill="currentColor">?</text></svg>`,
+      shaded: `<svg viewBox="0 0 160 160" xmlns="http://www.w3.org/2000/svg"><rect x="10" y="10" width="40" height="40" fill="currentColor" opacity=".85"/><rect x="60" y="10" width="40" height="40" fill="none" stroke="currentColor" stroke-width="2"/><rect x="110" y="10" width="40" height="40" fill="currentColor" opacity=".85"/><rect x="10" y="60" width="40" height="40" fill="none" stroke="currentColor" stroke-width="2"/><rect x="60" y="60" width="40" height="40" fill="currentColor" opacity=".85"/><rect x="110" y="60" width="40" height="40" fill="none" stroke="currentColor" stroke-width="2"/><rect x="10" y="110" width="40" height="40" fill="currentColor" opacity=".85"/><rect x="60" y="110" width="40" height="40" fill="none" stroke="currentColor" stroke-width="2"/><rect x="110" y="110" width="40" height="40" fill="none" stroke="currentColor" stroke-width="2"/></svg>`,
+      arrows: `<svg viewBox="0 0 280 80" xmlns="http://www.w3.org/2000/svg"><path d="M20 40h40l-10-12M60 40l-10 12" fill="none" stroke="currentColor" stroke-width="3"/><text x="40" y="70" text-anchor="middle" font-size="12" fill="currentColor">1</text><path d="M90 40h40l-10-12M130 40l-10 12" fill="none" stroke="currentColor" stroke-width="3"/><text x="110" y="70" text-anchor="middle" font-size="12" fill="currentColor">2</text><path d="M200 40h-40l10-12M160 40l10 12" fill="none" stroke="currentColor" stroke-width="3"/><text x="180" y="70" text-anchor="middle" font-size="12" fill="currentColor">3</text><path d="M230 40h40l-10-12M270 40l-10 12" fill="none" stroke="currentColor" stroke-width="3"/><text x="250" y="70" text-anchor="middle" font-size="12" fill="currentColor">4</text></svg>`,
+      "num-circle": `<svg viewBox="0 0 220 120" xmlns="http://www.w3.org/2000/svg"><circle cx="110" cy="60" r="48" fill="none" stroke="currentColor" stroke-width="3"/><text x="110" y="40" text-anchor="middle" font-size="16" fill="currentColor">3</text><text x="145" y="70" text-anchor="middle" font-size="16" fill="currentColor">5</text><text x="110" y="95" text-anchor="middle" font-size="16" fill="currentColor">7</text><text x="75" y="70" text-anchor="middle" font-size="16" fill="currentColor">?</text><text x="110" y="68" text-anchor="middle" font-size="14" fill="currentColor">+2</text></svg>`,
+      "polygon-set": `<svg viewBox="0 0 260 100" xmlns="http://www.w3.org/2000/svg"><polygon points="40,80 60,30 80,80" fill="none" stroke="currentColor" stroke-width="3"/><polygon points="110,80 140,30 170,80" fill="none" stroke="currentColor" stroke-width="3"/><rect x="200" y="28" width="40" height="50" rx="4" fill="none" stroke="currentColor" stroke-width="3" stroke-dasharray="5 4"/><text x="220" y="58" text-anchor="middle" font-size="18" fill="currentColor">?</text></svg>`,
+      circles: `<svg viewBox="0 0 220 120" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="40" r="20" fill="none" stroke="currentColor" stroke-width="3"/><circle cx="110" cy="40" r="20" fill="none" stroke="currentColor" stroke-width="3"/><circle cx="170" cy="40" r="20" fill="none" stroke="currentColor" stroke-width="3"/><circle cx="80" cy="85" r="18" fill="none" stroke="currentColor" stroke-width="3"/><circle cx="140" cy="85" r="18" fill="none" stroke="currentColor" stroke-width="3"/></svg>`,
+    };
+    return svgs[kind] || "";
   }
 
   function show(section) {
@@ -167,20 +327,25 @@
   }
 
   function setDurationButtons() {
-    if (tool === "data-entry-test") {
+    if (isEntry) {
       durationWrap.hidden = true;
       state.durationSec = 120;
       return;
     }
 
     durationWrap.hidden = false;
+    durationLabel.textContent = isMixed ? "Test time" : "Duration";
+    const list = isMixed ? MIXED_DURATIONS : TYPING_DURATIONS;
+    if (!list.some((item) => item.sec === state.durationSec)) {
+      state.durationSec = list[0].sec;
+    }
+
     durationsEl.innerHTML = "";
-    TYPING_DURATIONS.forEach((item) => {
+    list.forEach((item) => {
       const btn = document.createElement("button");
       btn.type = "button";
       btn.className = "typing-duration" + (item.sec === state.durationSec ? " is-active" : "");
       btn.textContent = item.label;
-      btn.dataset.sec = String(item.sec);
       btn.addEventListener("click", () => {
         state.durationSec = item.sec;
         durationsEl.querySelectorAll(".typing-duration").forEach((el) => el.classList.remove("is-active"));
@@ -190,24 +355,71 @@
     });
   }
 
+  function setParagraphPicker() {
+    if (!isCustom) {
+      paragraphWrap.hidden = true;
+      return;
+    }
+
+    paragraphWrap.hidden = false;
+    paragraphList.innerHTML = "";
+    CUSTOM_PARAGRAPHS.forEach((para, index) => {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "typing-paragraph-item" + (index === state.paragraphIndex ? " is-active" : "");
+      btn.setAttribute("role", "option");
+      btn.setAttribute("aria-selected", index === state.paragraphIndex ? "true" : "false");
+      btn.innerHTML = `<strong>${index + 1}. ${escapeHtml(para.title)}</strong><span>${escapeHtml(para.text.slice(0, 72))}…</span>`;
+      btn.addEventListener("click", () => {
+        state.paragraphIndex = index;
+        paragraphList.querySelectorAll(".typing-paragraph-item").forEach((el) => {
+          el.classList.remove("is-active");
+          el.setAttribute("aria-selected", "false");
+        });
+        btn.classList.add("is-active");
+        btn.setAttribute("aria-selected", "true");
+        updateParagraphPreview();
+      });
+      paragraphList.appendChild(btn);
+    });
+    updateParagraphPreview();
+  }
+
+  function updateParagraphPreview() {
+    const para = CUSTOM_PARAGRAPHS[state.paragraphIndex];
+    if (!para) return;
+    paragraphPreview.hidden = false;
+    paragraphPreviewText.textContent = para.text;
+  }
+
   function configureSetupCopy() {
-    if (tool === "data-entry-test") {
+    if (isEntry) {
       setupTitle.textContent = "120-second data entry";
       setupCopy.textContent = "Type each value exactly as shown, then press Enter. Score is based on correct entries.";
       startBtn.textContent = "Start 120s test";
       statWpmLabel.textContent = "EPM";
+      statAccuracyLabel.textContent = "Accuracy";
       statProgressLabel.textContent = "Correct";
-    } else if (tool === "mixed-test") {
-      setupTitle.textContent = "Mixed typing challenge";
-      setupCopy.textContent = "Practice words, numbers, codes, and punctuation together. Choose your duration.";
+    } else if (isMixed) {
+      setupTitle.textContent = "Mixed aptitude test";
+      setupCopy.textContent = "English MCQs, Mathematics, image/pattern questions, and critical thinking — all in one timed test.";
       startBtn.textContent = "Start mixed test";
+      statWpmLabel.textContent = "Score";
+      statAccuracyLabel.textContent = "Accuracy";
+      statProgressLabel.textContent = "Answered";
+    } else if (isCustom) {
+      setupTitle.textContent = "Custom typing test";
+      setupCopy.textContent = "Select any of the 20 paragraphs below, choose a duration, then start typing.";
+      startBtn.textContent = "Start with selected paragraph";
       statWpmLabel.textContent = "WPM";
+      statAccuracyLabel.textContent = "Accuracy";
       statProgressLabel.textContent = "Chars";
     } else {
       setupTitle.textContent = "Typing speed test";
       setupCopy.textContent = "Choose a duration from 30 seconds to 30 minutes, then type the passage.";
       startBtn.textContent = "Start typing test";
       statWpmLabel.textContent = "WPM";
+      statAccuracyLabel.textContent = "Accuracy";
       statProgressLabel.textContent = "Chars";
     }
   }
@@ -220,26 +432,26 @@
   }
 
   function elapsedMinutes() {
-    const elapsedMs = Math.max(1, Date.now() - state.startedAt);
-    return elapsedMs / 60000;
+    return Math.max(1, Date.now() - state.startedAt) / 60000;
   }
 
   function liveWpm() {
-    if (tool === "data-entry-test") {
-      return Math.round(state.entryCorrect / elapsedMinutes());
-    }
-    return Math.round((state.correct / 5) / elapsedMinutes());
+    if (isEntry) return Math.round(state.entryCorrect / elapsedMinutes());
+    if (isMixed) return state.mcqCorrect;
+    return Math.round(state.correct / 5 / elapsedMinutes());
   }
 
   function liveAccuracy() {
-    if (tool === "data-entry-test") {
+    if (isEntry) {
       const total = state.entryCorrect + state.entryWrong;
-      if (!total) return 100;
-      return Math.max(0, Math.round((state.entryCorrect / total) * 100));
+      return total ? Math.max(0, Math.round((state.entryCorrect / total) * 100)) : 100;
+    }
+    if (isMixed) {
+      const total = state.mcqCorrect + state.mcqWrong;
+      return total ? Math.max(0, Math.round((state.mcqCorrect / total) * 100)) : 100;
     }
     const total = state.correct + state.incorrect;
-    if (!total) return 100;
-    return Math.max(0, Math.round((state.correct / total) * 100));
+    return total ? Math.max(0, Math.round((state.correct / total) * 100)) : 100;
   }
 
   function updateLiveStats() {
@@ -247,11 +459,9 @@
     statTimer.textContent = formatTime(left);
     statWpm.textContent = String(liveWpm());
     statAccuracy.textContent = `${liveAccuracy()}%`;
-    if (tool === "data-entry-test") {
-      statProgress.textContent = String(state.entryCorrect);
-    } else {
-      statProgress.textContent = String(state.typed.length);
-    }
+    if (isEntry) statProgress.textContent = String(state.entryCorrect);
+    else if (isMixed) statProgress.textContent = String(state.mcqCorrect + state.mcqWrong + state.mcqSkipped);
+    else statProgress.textContent = String(state.typed.length);
   }
 
   function renderPassage() {
@@ -259,26 +469,13 @@
     const typed = state.typed;
     let html = "";
     for (let i = 0; i < chars.length; i += 1) {
-      const ch = chars[i] === " " ? " " : chars[i];
       let cls = "ch";
-      if (i < typed.length) {
-        cls += typed[i] === chars[i] ? " is-ok" : " is-bad";
-      } else if (i === typed.length) {
-        cls += " is-current";
-      }
-      html += `<span class="${cls}">${ch === " " ? "&nbsp;" : escapeHtml(ch)}</span>`;
+      if (i < typed.length) cls += typed[i] === chars[i] ? " is-ok" : " is-bad";
+      else if (i === typed.length) cls += " is-current";
+      html += `<span class="${cls}">${chars[i] === " " ? "&nbsp;" : escapeHtml(chars[i])}</span>`;
     }
     textEl.innerHTML = html;
-    const current = textEl.querySelector(".is-current");
-    current?.scrollIntoView({ block: "center", inline: "nearest" });
-  }
-
-  function escapeHtml(value) {
-    return value
-      .replaceAll("&", "&amp;")
-      .replaceAll("<", "&lt;")
-      .replaceAll(">", "&gt;")
-      .replaceAll('"', "&quot;");
+    textEl.querySelector(".is-current")?.scrollIntoView({ block: "center", inline: "nearest" });
   }
 
   function scoreTyped(value) {
@@ -295,7 +492,7 @@
     renderPassage();
     updateLiveStats();
     if (value.length >= state.target.length) {
-      state.target += " " + buildPassage(tool === "mixed-test" ? "mixed" : "typing");
+      state.target += " " + (isCustom ? CUSTOM_PARAGRAPHS[state.paragraphIndex].text : buildPassage());
       renderPassage();
     }
   }
@@ -321,18 +518,80 @@
     if (!state.running) return;
     const item = state.entries[state.entryIndex];
     if (!item) return;
-
-    if (skipped) {
-      state.entrySkipped += 1;
-    } else {
+    if (skipped) state.entrySkipped += 1;
+    else {
       const typed = normalizeEntry(entryInput.value);
       const expected = normalizeEntry(item.value);
       if (typed && typed === expected) state.entryCorrect += 1;
       else state.entryWrong += 1;
     }
-
     state.entryIndex += 1;
     showEntry();
+  }
+
+  function ensureCat(cat) {
+    if (!state.byCat[cat]) state.byCat[cat] = { correct: 0, wrong: 0, skipped: 0 };
+    return state.byCat[cat];
+  }
+
+  function renderMcq() {
+    const item = state.questions[state.qIndex];
+    if (!item) {
+      finishTest();
+      return;
+    }
+
+    state.selectedOption = null;
+    mcqNextBtn.disabled = true;
+    mcqCat.textContent = item.cat;
+    mcqCount.textContent = `Question ${state.qIndex + 1} / ${state.questions.length}`;
+    mcqQuestion.textContent = item.q;
+
+    if (item.image) {
+      mcqImage.hidden = false;
+      mcqImage.innerHTML = renderMcqImage(item.image);
+    } else {
+      mcqImage.hidden = true;
+      mcqImage.innerHTML = "";
+    }
+
+    mcqOptions.innerHTML = "";
+    item.options.forEach((opt, index) => {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "mcq-option";
+      btn.textContent = `${String.fromCharCode(65 + index)}. ${opt}`;
+      btn.addEventListener("click", () => {
+        state.selectedOption = index;
+        mcqOptions.querySelectorAll(".mcq-option").forEach((el) => el.classList.remove("is-selected"));
+        btn.classList.add("is-selected");
+        mcqNextBtn.disabled = false;
+      });
+      mcqOptions.appendChild(btn);
+    });
+    updateLiveStats();
+  }
+
+  function commitMcq(skipped) {
+    if (!state.running) return;
+    const item = state.questions[state.qIndex];
+    if (!item) return;
+    const bucket = ensureCat(item.cat);
+
+    if (skipped || state.selectedOption === null) {
+      state.mcqSkipped += 1;
+      bucket.skipped += 1;
+    } else if (state.selectedOption === item.answer) {
+      state.mcqCorrect += 1;
+      bucket.correct += 1;
+    } else {
+      state.mcqWrong += 1;
+      bucket.wrong += 1;
+    }
+
+    state.qIndex += 1;
+    if (state.qIndex >= state.questions.length) finishTest();
+    else renderMcq();
   }
 
   function finishTest() {
@@ -343,10 +602,33 @@
     entryInput.blur();
 
     const minutes = Math.max(state.durationSec / 60, elapsedMinutes());
-    const wpm = tool === "data-entry-test"
-      ? Math.round(state.entryCorrect / minutes)
-      : Math.round((state.correct / 5) / minutes);
     const accuracy = liveAccuracy();
+
+    if (isMixed) {
+      const totalQ = state.questions.length;
+      const score = state.mcqCorrect;
+      resultsTitle.textContent = score >= totalQ * 0.8 ? "Excellent aptitude score" : score >= totalQ * 0.6 ? "Good attempt" : "Test complete";
+      const cards = [
+        { label: "Score", value: `${score}/${totalQ}` },
+        { label: "Accuracy", value: `${accuracy}%` },
+        { label: "Wrong", value: String(state.mcqWrong) },
+        { label: "Skipped", value: String(state.mcqSkipped) },
+        { label: "English", value: `${state.byCat.English?.correct || 0}` },
+        { label: "Math", value: `${state.byCat.Mathematics?.correct || 0}` },
+        { label: "Image", value: `${state.byCat["Image / Pattern"]?.correct || 0}` },
+        { label: "Critical", value: `${state.byCat["Critical Thinking"]?.correct || 0}` },
+        { label: "Duration", value: formatTime(state.durationSec) },
+      ];
+      resultGrid.innerHTML = cards
+        .map((card) => `<div class="typing-result-card"><strong>${card.value}</strong><span>${card.label}</span></div>`)
+        .join("");
+      show("results");
+      return;
+    }
+
+    const wpm = isEntry
+      ? Math.round(state.entryCorrect / minutes)
+      : Math.round(state.correct / 5 / minutes);
 
     let title = "Test complete";
     if (accuracy >= 95 && wpm >= 40) title = "Excellent result";
@@ -354,7 +636,7 @@
     else if (wpm >= 35) title = "Solid speed";
     resultsTitle.textContent = title;
 
-    const cards = tool === "data-entry-test"
+    const cards = isEntry
       ? [
           { label: "Correct entries", value: String(state.entryCorrect) },
           { label: "Entries / min", value: String(wpm) },
@@ -369,17 +651,34 @@
           { label: "Correct chars", value: String(state.correct) },
           { label: "Errors", value: String(state.incorrect) },
           { label: "Typed", value: String(state.typed.length) },
-          { label: "Duration", value: formatTime(state.durationSec) },
+          { label: isCustom ? "Paragraph" : "Duration", value: isCustom ? String(state.paragraphIndex + 1) : formatTime(state.durationSec) },
         ];
 
-    resultGrid.innerHTML = cards
-      .map((card) => `<div class="typing-result-card"><strong>${card.value}</strong><span>${card.label}</span></div>`)
-      .join("");
+    if (isCustom) {
+      cards.push({ label: "Duration", value: formatTime(state.durationSec) });
+      cards.push({ label: "Topic", value: CUSTOM_PARAGRAPHS[state.paragraphIndex]?.title || "-" });
+    }
 
+    resultGrid.innerHTML = cards
+      .map((card) => `<div class="typing-result-card"><strong>${escapeHtml(card.value)}</strong><span>${escapeHtml(card.label)}</span></div>`)
+      .join("");
     show("results");
   }
 
+  function buildMixedQuestions() {
+    const english = shuffle(MCQ_BANK.filter((q) => q.cat === "English")).slice(0, 5);
+    const math = shuffle(MCQ_BANK.filter((q) => q.cat === "Mathematics")).slice(0, 5);
+    const image = shuffle(MCQ_BANK.filter((q) => q.cat === "Image / Pattern")).slice(0, 5);
+    const critical = shuffle(MCQ_BANK.filter((q) => q.cat === "Critical Thinking")).slice(0, 5);
+    return shuffle([...english, ...math, ...image, ...critical]);
+  }
+
   function startTest() {
+    if (isCustom && state.paragraphIndex < 0) {
+      alert("Please select a paragraph first.");
+      return;
+    }
+
     clearTimer();
     state.running = true;
     state.startedAt = Date.now();
@@ -391,20 +690,29 @@
     state.entryCorrect = 0;
     state.entryWrong = 0;
     state.entrySkipped = 0;
+    state.qIndex = 0;
+    state.selectedOption = null;
+    state.mcqCorrect = 0;
+    state.mcqWrong = 0;
+    state.mcqSkipped = 0;
+    state.byCat = {};
 
-    const isEntry = tool === "data-entry-test";
     promptCard.hidden = !isEntry;
     entryWrap.hidden = !isEntry;
-    textWrap.hidden = isEntry;
+    textWrap.hidden = isEntry || isMixed;
+    mcqWrap.hidden = !isMixed;
+
+    show("run");
 
     if (isEntry) {
       state.entries = buildEntries(120);
-      show("run");
       showEntry();
+    } else if (isMixed) {
+      state.questions = buildMixedQuestions();
+      renderMcq();
     } else {
-      state.target = buildPassage(tool === "mixed-test" ? "mixed" : "typing");
+      state.target = buildPassage();
       inputEl.value = "";
-      show("run");
       renderPassage();
       inputEl.focus();
     }
@@ -428,7 +736,7 @@
   }
 
   inputEl.addEventListener("input", () => {
-    if (!state.running || tool === "data-entry-test") return;
+    if (!state.running || isEntry || isMixed) return;
     scoreTyped(inputEl.value);
   });
 
@@ -444,11 +752,14 @@
   });
 
   skipBtn?.addEventListener("click", () => submitEntry(true));
+  mcqNextBtn?.addEventListener("click", () => commitMcq(false));
+  mcqSkipBtn?.addEventListener("click", () => commitMcq(true));
   startBtn.addEventListener("click", startTest);
   restartBtn.addEventListener("click", startTest);
   againBtn.addEventListener("click", resetToSetup);
 
   configureSetupCopy();
   setDurationButtons();
+  setParagraphPicker();
   show("setup");
 })();
