@@ -65,6 +65,11 @@
     { sec: 1800, label: "30 min" },
   ];
 
+  const ENTRY_DURATIONS = [
+    { sec: 60, label: "60 sec" },
+    { sec: 120, label: "120 sec" },
+  ];
+
   const MIXED_DURATIONS = [
     { sec: 300, label: "5 min", questions: 12 },
     { sec: 600, label: "10 min", questions: 20 },
@@ -216,7 +221,7 @@
   ];
 
   const state = {
-    durationSec: isEntry ? 120 : isMixed ? 600 : 60,
+    durationSec: isEntry ? 60 : isMixed ? 600 : 60,
     textMode: "random", // typing-test only: random | custom
     paragraphIndex: 0,
     running: false,
@@ -374,15 +379,9 @@
   }
 
   function setDurationButtons() {
-    if (isEntry) {
-      durationWrap.hidden = true;
-      state.durationSec = 120;
-      return;
-    }
-
     durationWrap.hidden = false;
-    durationLabel.textContent = isMixed ? "Test time" : "Duration";
-    const list = isMixed ? MIXED_DURATIONS : TYPING_DURATIONS;
+    durationLabel.textContent = isMixed ? "Test time" : isEntry ? "Time limit" : "Duration";
+    const list = isMixed ? MIXED_DURATIONS : isEntry ? ENTRY_DURATIONS : TYPING_DURATIONS;
     if (!list.some((item) => item.sec === state.durationSec)) {
       state.durationSec = list[0].sec;
     }
@@ -398,9 +397,18 @@
         durationsEl.querySelectorAll(".typing-duration").forEach((el) => el.classList.remove("is-active"));
         btn.classList.add("is-active");
         if (isMixed) updateMixedSetupHint();
+        if (isEntry) updateEntrySetupHint();
       });
       durationsEl.appendChild(btn);
     });
+  }
+
+  function updateEntrySetupHint() {
+    if (!isEntry) return;
+    const sec = state.durationSec;
+    setupTitle.textContent = "Data entry test";
+    setupCopy.textContent = `Choose ${sec} seconds. Retype each value exactly and press Enter. When time ends, you get results for attempted, correct, wrong, and accuracy.`;
+    startBtn.textContent = `Start ${sec}s data entry`;
   }
 
   function mixedQuestionCount() {
@@ -470,12 +478,10 @@
 
   function configureSetupCopy() {
     if (isEntry) {
-      setupTitle.textContent = "120-second data entry";
-      setupCopy.textContent = "This is not a paragraph typing test. Retype each field value exactly, then press Enter.";
-      startBtn.textContent = "Start 120s data entry";
+      updateEntrySetupHint();
       statWpmLabel.textContent = "EPM";
       statAccuracyLabel.textContent = "Accuracy";
-      statProgressLabel.textContent = "Correct";
+      statProgressLabel.textContent = "Attempted";
     } else if (isMixed) {
       setupTitle.textContent = "Critical thinking test";
       updateMixedSetupHint();
@@ -512,7 +518,7 @@
   function liveAccuracy() {
     if (isEntry) {
       const total = state.entryCorrect + state.entryWrong;
-      return total ? Math.max(0, Math.round((state.entryCorrect / total) * 100)) : 100;
+      return total ? Math.max(0, Math.round((state.entryCorrect / total) * 100)) : 0;
     }
     if (isMixed) {
       const total = state.mcqCorrect + state.mcqWrong;
@@ -527,9 +533,13 @@
     statTimer.textContent = formatTime(left);
     statWpm.textContent = String(liveWpm());
     statAccuracy.textContent = `${liveAccuracy()}%`;
-    if (isEntry) statProgress.textContent = String(state.entryCorrect);
-    else if (isMixed) statProgress.textContent = String(state.mcqCorrect + state.mcqWrong + state.mcqSkipped);
-    else statProgress.textContent = String(state.typed.length);
+    if (isEntry) {
+      statProgress.textContent = String(state.entryCorrect + state.entryWrong + state.entrySkipped);
+    } else if (isMixed) {
+      statProgress.textContent = String(state.mcqCorrect + state.mcqWrong + state.mcqSkipped);
+    } else {
+      statProgress.textContent = String(state.typed.length);
+    }
   }
 
   function renderPassage() {
@@ -690,8 +700,35 @@
     inputEl.blur();
     entryInput.blur();
 
-    const minutes = Math.max(state.durationSec / 60, elapsedMinutes());
+    const minutes = Math.max(elapsedMinutes(), 1 / 60);
     const accuracy = liveAccuracy();
+
+    if (isEntry) {
+      const attempted = state.entryCorrect + state.entryWrong + state.entrySkipped;
+      const graded = state.entryCorrect + state.entryWrong;
+      const epm = Math.round(state.entryCorrect / minutes);
+
+      if (attempted === 0) resultsTitle.textContent = "Time is up — no entries attempted";
+      else if (accuracy >= 95 && graded >= 5) resultsTitle.textContent = "Excellent data entry score";
+      else if (accuracy >= 85) resultsTitle.textContent = "Strong accuracy";
+      else if (graded > 0) resultsTitle.textContent = "Data entry complete";
+      else resultsTitle.textContent = "Time is up";
+
+      const cards = [
+        { label: "Attempted", value: String(attempted) },
+        { label: "Correct", value: String(state.entryCorrect) },
+        { label: "Wrong", value: String(state.entryWrong) },
+        { label: "Skipped", value: String(state.entrySkipped) },
+        { label: "Accuracy", value: graded ? `${accuracy}%` : "—" },
+        { label: "Correct / min", value: String(epm) },
+        { label: "Time limit", value: formatTime(state.durationSec) },
+      ];
+      resultGrid.innerHTML = cards
+        .map((card) => `<div class="typing-result-card"><strong>${escapeHtml(card.value)}</strong><span>${escapeHtml(card.label)}</span></div>`)
+        .join("");
+      show("results");
+      return;
+    }
 
     if (isMixed) {
       const totalQ = state.questions.length;
@@ -715,9 +752,7 @@
       return;
     }
 
-    const wpm = isEntry
-      ? Math.round(state.entryCorrect / minutes)
-      : Math.round(state.correct / 5 / minutes);
+    const wpm = Math.round(state.correct / 5 / minutes);
 
     let title = "Test complete";
     if (accuracy >= 95 && wpm >= 40) title = "Excellent result";
@@ -725,23 +760,14 @@
     else if (wpm >= 35) title = "Solid speed";
     resultsTitle.textContent = title;
 
-    const cards = isEntry
-      ? [
-          { label: "Correct entries", value: String(state.entryCorrect) },
-          { label: "Entries / min", value: String(wpm) },
-          { label: "Accuracy", value: `${accuracy}%` },
-          { label: "Wrong", value: String(state.entryWrong) },
-          { label: "Skipped", value: String(state.entrySkipped) },
-          { label: "Duration", value: formatTime(state.durationSec) },
-        ]
-      : [
-          { label: "WPM", value: String(wpm) },
-          { label: "Accuracy", value: `${accuracy}%` },
-          { label: "Correct chars", value: String(state.correct) },
-          { label: "Errors", value: String(state.incorrect) },
-          { label: "Typed", value: String(state.typed.length) },
-          { label: "Duration", value: formatTime(state.durationSec) },
-        ];
+    const cards = [
+      { label: "WPM", value: String(wpm) },
+      { label: "Accuracy", value: `${accuracy}%` },
+      { label: "Correct chars", value: String(state.correct) },
+      { label: "Errors", value: String(state.incorrect) },
+      { label: "Typed", value: String(state.typed.length) },
+      { label: "Duration", value: formatTime(state.durationSec) },
+    ];
 
     if (usingCustomParagraph()) {
       cards.push({ label: "Mode", value: "Custom" });

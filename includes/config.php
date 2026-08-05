@@ -137,7 +137,7 @@ return [
         ],
         'data-entry-test' => [
             'name' => 'Data Entry Test',
-            'desc' => '120-second aptitude data entry: names, phones, IDs, amounts, and codes.',
+            'desc' => '60 or 120 second data entry test. Score shows attempted, correct, wrong, and accuracy.',
             'cat'  => 'test',
         ],
         'mixed-test' => [
